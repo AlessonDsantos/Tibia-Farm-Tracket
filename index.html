@@ -280,6 +280,14 @@ tr.total td:first-child{font-weight:700}
 <div class="modal" id="mCfg"><div class="box">
  <h3>Configurações</h3><p>Metas, dados e manutenção do tracker.</p>
  <div class="field" style="margin-bottom:14px">
+  <label>Nickname no Tibia</label>
+  <div style="display:flex;gap:7px">
+   <input id="cfgNickname" type="text" maxlength="30" placeholder="Ex.: SeuNick">
+   <button class="mini" style="flex:none" onclick="salvarNickname()">Salvar</button>
+  </div>
+  <p style="margin:7px 0 0;font-size:11px">Seu nickname será usado para identificar você nos rankings públicos de Farm, Constância e Hunts.</p>
+ </div>
+ <div class="field" style="margin-bottom:14px">
   <label>Preço de 25 Tibia Coins em R$ (opcional)</label>
   <div style="display:flex;gap:7px">
    <input id="cfgBRL25" type="number" min="0" step="0.01" placeholder="Ex.: 53,50">

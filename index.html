@@ -68,7 +68,7 @@ button:focus-visible,.select:focus-visible,input:focus-visible{outline:2px solid
 .left .wide{grid-column:1/-1}
 .side{display:grid;gap:11px}
 .card{border:1px solid var(--line2);border-radius:12px;padding:14px;
- background:linear-gradient(180deg,rgba(7,22,38,.92),rgba(4,12,23,.94));
+ background:linear-gradient(180deg,rgba(7,22,38,.68),rgba(4,12,23,.72));
  box-shadow:0 10px 26px rgba(0,0,0,.35)}
 .card h2{margin:0 0 12px;font-size:13px;font-weight:700;color:#cfe4f2;display:flex;align-items:center;gap:7px;
  padding-bottom:9px;border-bottom:1px solid #12314a}
@@ -201,6 +201,33 @@ tr.total td:first-child{font-weight:700}
  .topbar{grid-template-columns:1fr}.item{flex-direction:column}.foot{grid-template-columns:1fr;text-align:center}
  .foot .quote{border-left:0;padding:0}}
 </style>
+
+<style>
+.retention-header{background:transparent !important;}
+.retention-dashboard{background:transparent !important;}
+.retention-card,.retention-section{background:rgba(4,16,29,.52) !important;}
+.performance-filter{display:flex;align-items:end;gap:7px;flex-wrap:wrap;background:rgba(4,16,29,.42);border:1px solid rgba(44,97,136,.55);padding:8px;border-radius:10px;}
+.performance-filter label{display:block;font-size:10px;color:var(--muted);width:100%;margin-bottom:-3px;}
+.performance-filter input{background:#061829;color:#d9ecf9;border:1px solid #2c6188;border-radius:7px;padding:7px 9px;font:inherit;}
+.performance-filter button{padding:7px 10px;font-size:11px;}
+.weekly-hunts{margin:2px 0;padding:9px;border:1px solid #1a3b55;border-radius:9px;background:rgba(4,18,31,.5);}
+.inner-table{margin-top:7px;width:100%;font-size:11px;}
+.inner-table th,.inner-table td{padding:7px 6px;}
+</style>
+<style>
+.rank-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:14px 0}
+.rank-tabs button{flex:1;min-width:150px}
+.rank-tabs button.on{border-color:#25c98c;background:rgba(37,201,140,.12);color:#dfffee}
+.ranking-status{font-size:11px;color:var(--muted);margin:8px 0}
+.ranking-list{display:grid;gap:7px;margin-top:10px}
+.ranking-row{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:10px;padding:11px 12px;border:1px solid rgba(127,127,127,.18);border-radius:10px;background:rgba(255,255,255,.025)}
+.ranking-pos{font-size:16px;font-weight:800;text-align:center;color:#8fd8ff}
+.ranking-name{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ranking-value{font-weight:800;color:#ffd978;text-align:right}
+.ranking-value span{margin-right:5px}
+.ranking-empty{padding:28px 12px;text-align:center;color:var(--muted);border:1px dashed rgba(127,127,127,.25);border-radius:10px}
+@media(max-width:600px){.ranking-row{grid-template-columns:34px 1fr}.ranking-value{grid-column:2;text-align:left}.rank-tabs button{min-width:0}}
+</style>
 </head>
 <body>
 <div class="page">
@@ -220,7 +247,7 @@ tr.total td:first-child{font-weight:700}
      <input id="tcPrice" type="number" min="1" step="1" style="padding:4px 8px;font-size:14px;margin-top:2px"></div>
     <button class="mini" onclick="salvarPreco()">Salvar</button>
    </div>
-   <button onclick="abrirConfig()">⚙ Configurações</button>
+   <button onclick="abrirRanking()">🏆 Ranking</button><button onclick="abrirConfig()">⚙ Configurações</button>
    <button id="btnAuth" class="btn-account" onclick="onAuthBtn()">👤 Entrar com Google</button>
   </div>
 
@@ -261,7 +288,7 @@ tr.total td:first-child{font-weight:700}
   <p style="margin:7px 0 0;font-size:11px">Confira o preço de hoje no
    <a href="https://www.moedaz.com/tibia" target="_blank" rel="noopener" style="color:#8fd8ff">Moedaz</a> ou
    <a href="https://www.reidoscoins.com.br/Tibia-Coins" target="_blank" rel="noopener" style="color:#8fd8ff">Rei dos Coins</a>
-   
+   — eles vendem em blocos de 25 TC, então cole aqui o preço desse bloco (ex.: 25 TC por R$ 53,50).</p>
  </div>
  <div class="rep">
   <button class="blue" onclick="fechar('mCfg');novaMeta()"><b>+ Criar nova meta</b><small>Você pode alternar entre várias metas</small></button>
@@ -275,7 +302,11 @@ tr.total td:first-child{font-weight:700}
 
 <div class="modal" id="mAdd"><div class="box">
  <h3>Adicionar farm</h3><p id="addDate">—</p>
- <div class="field"><label>Valor em Gold</label><input id="addGold" type="number" min="1" placeholder="Ex.: 2000000"></div>
+ <div class="field"><label>Nome da Hunt</label><input id="addHunt" type="text" maxlength="80" placeholder="Ex.: Rotten Blood"></div>
+ <div class="grid2">
+  <div class="field"><label>Tempo de Hunt (minutos)</label><input id="addTime" type="number" min="1" step="1" placeholder="Ex.: 60"></div>
+  <div class="field"><label>Valor em Gold</label><input id="addGold" type="number" min="1" placeholder="Ex.: 2000000"></div>
+ </div>
  <div class="actions"><button class="btn-green" onclick="confirmarAdd()">Registrar farm</button>
   <button onclick="fechar('mAdd')">Cancelar</button></div>
 </div></div>
@@ -291,6 +322,25 @@ tr.total td:first-child{font-weight:700}
   <button onclick="fechar('mShare')">Fechar</button>
  </div>
 </div></div>
+
+<div class="modal" id="mWeeklyGoal"><div class="box">
+ <h3>🎯 Meta de profit semanal</h3><p>Defina quanto de profit você quer alcançar nesta semana.</p>
+ <div class="field"><label>Meta em Gold</label><input id="weeklyGoalInput" type="number" min="1" step="1" placeholder="1000000"></div>
+ <div class="actions"><button class="btn-green" onclick="salvarMetaSemanalModal()">Salvar meta</button><button onclick="fechar('mWeeklyGoal')">Cancelar</button></div>
+</div></div>
+
+<div class="modal" id="mRanking"><div class="box" style="width:min(760px,100%)">
+ <h3>🏆 Ranking do Tibia Farm Tracker</h3>
+ <p>Top 10 dos usuários que optaram por aparecer no ranking. Os dados são carregados diretamente do banco de dados.</p>
+ <div class="rank-tabs">
+  <button class="on" id="rankTabFarm" onclick="mostrarRanking('farm')">💰 Top Farm</button>
+  <button id="rankTabStreak" onclick="mostrarRanking('streak')">🔥 Top Constância</button>
+  <button id="rankTabHunts" onclick="mostrarRanking('hunts')">⚔️ Top Hunts</button>
+ </div>
+ <div id="rankingStatus" class="ranking-status">Carregando ranking...</div>
+ <div id="rankingList" class="ranking-list"></div>
+ <div class="actions"><button onclick="fechar('mRanking')">Fechar</button></div>
+ </div></div>
 
 <div class="toast" id="toast"></div>
 
@@ -369,7 +419,7 @@ async function buscarItens(termo){
 
 /* ================= estado + persistência ================= */
 const CK="tibiaFarm3_",CHUNK=3200;
-var S={metas:[],ativa:null,tcPrice:35000,tcBRL:0},aba="hist",abaRel="semanal",addDate=null,tSugg=null,menuAberto=false;
+var S={metas:[],ativa:null,tcPrice:35000,tcBRL:0,nickname:""},aba="hist",abaRel="semanal",abaHist="dia",histDateFilter="",addDate=null,tSugg=null,menuAberto=false;
 
 function serializar(){return btoa(unescape(encodeURIComponent(JSON.stringify(S))))}
 function salvar(){
@@ -390,7 +440,7 @@ function carregar(){
   const c=document.cookie.match(new RegExp("(?:^|; )"+CK+i+"=([^;]*)"));if(c)b+=c[1]}}
  if(!b){try{b=localStorage.getItem(CK+"data")||""}catch(e){}}
  if(!b)return;
- try{const o=JSON.parse(decodeURIComponent(escape(atob(b))));if(o&&o.metas)S=o}catch(e){}
+ try{const o=JSON.parse(decodeURIComponent(escape(atob(b))));if(o&&o.metas){S=o;if(typeof S.nickname!=="string")S.nickname=""}}catch(e){}
 }
 
 /* ================= helpers ================= */
@@ -406,16 +456,17 @@ function toast(t){const e=document.getElementById("toast");e.textContent=t;e.cla
 function fechar(id){document.getElementById(id).classList.remove("open")}
 function abrir(id){document.getElementById(id).classList.add("open")}
 
-const gold=g=>g.sessoes.filter(s=>!s.somado).reduce((a,s)=>a+Number(s.gold),0);
-const tc=g=>gold(g)/S.tcPrice;
-const diasFarm=g=>[...new Set(g.sessoes.map(s=>s.data))].sort();
-const doDia=(g,d)=>g.sessoes.filter(s=>s.data===d&&!s.somado).sort((a,b)=>a.hora.localeCompare(b.hora));
+const isResumo=s=>!!s.resumoDia;
+const gold=g=>g.sessoes.filter(s=>!s.somado&&!isResumo(s)).reduce((a,s)=>a+Number(s.gold),0);
+const tc=g=>g.sessoes.filter(s=>!s.somado&&!isResumo(s)).reduce((a,s)=>a+Number(s.gold)/Number(s.tcPrice||S.tcPrice),0);
+const diasFarm=g=>[...new Set(g.sessoes.filter(s=>!isResumo(s)).map(s=>s.data))].sort();
+const doDia=(g,d)=>g.sessoes.filter(s=>s.data===d&&!s.somado&&!isResumo(s)).sort((a,b)=>String(a.hora||"").localeCompare(String(b.hora||"")));
 const goldDia=(g,d)=>doDia(g,d).reduce((a,s)=>a+Number(s.gold),0);
 function melhorDia(g){
  let best=null;
  diasFarm(g).forEach(d=>{const v=goldDia(g,d);if(!best||v>best.gold)best={data:d,gold:v}});
  return best}
-const tcDia=(g,d)=>goldDia(g,d)/S.tcPrice;
+const tcDia=(g,d)=>doDia(g,d).reduce((a,s)=>a+Number(s.gold)/Number(s.tcPrice||S.tcPrice),0);
 const diasDesde=g=>Math.floor((Date.now()-new Date(g.criada).getTime())/86400000);
 function janelaFarm(g){
  const ds=diasFarm(g);if(!ds.length)return 0;
@@ -453,33 +504,40 @@ function registrarFarm(){
  const v=Number(document.getElementById("farmGold").value);
  if(!(v>0))return toast("Informe o valor farmado.");
  const d=new Date();
+ const hunt=(document.getElementById("farmHunt")?.value||"").trim();
+ const tempo=Number(document.getElementById("farmTime")?.value);
+ if(!hunt)return toast("Informe o nome da Hunt.");
+ if(!(tempo>0))return toast("Informe o tempo da Hunt.");
  g.sessoes.push({id:Date.now()+Math.random(),data:hoje(),
-  hora:d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),gold:v,tcPrice:S.tcPrice});
+  hora:d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),gold:v,tcPrice:S.tcPrice,hunt,time:tempo});
+ document.getElementById("farmHunt").value="";document.getElementById("farmTime").value="";document.getElementById("farmGold").value="";
  checar(g);salvar();render();toast("Farm registrado.")}
 function addNoDia(d){
  addDate=d;document.getElementById("addDate").textContent="Data: "+brData(d);
- document.getElementById("addGold").value="";
- abrir("mAdd");setTimeout(()=>document.getElementById("addGold").focus(),50)}
+ document.getElementById("addHunt").value="";document.getElementById("addTime").value="";document.getElementById("addGold").value="";
+ abrir("mAdd");setTimeout(()=>document.getElementById("addHunt").focus(),50)}
 function confirmarAdd(){
- const g=meta(),v=Number(document.getElementById("addGold").value),p=S.tcPrice;
+ const g=meta(),v=Number(document.getElementById("addGold").value),p=S.tcPrice,
+  hunt=(document.getElementById("addHunt").value||"").trim(),tempo=Number(document.getElementById("addTime").value);
+ if(!hunt)return toast("Informe o nome da Hunt.");
+ if(!(tempo>0))return toast("Informe o tempo da Hunt.");
  if(!(v>0))return toast("Informe o valor em gold.");
  g.sessoes.push({id:Date.now()+Math.random(),data:addDate,
-  hora:new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),gold:v,tcPrice:p});
+  hora:new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}),gold:v,tcPrice:p,hunt,time:tempo});
  checar(g);salvar();fechar("mAdd");render();toast("Farm adicionado.")}
 function excluirFarm(id){
  const g=meta();if(!confirm("Excluir este registro?"))return;
  g.sessoes=g.sessoes.filter(s=>String(s.id)!==String(id));salvar();render()}
 function somarDia(d){
  const g=meta(),arr=doDia(g,d);
- if(arr.length<2)return toast("O dia precisa de pelo menos 2 registros.");
- const total=arr.reduce((a,s)=>a+Number(s.gold),0),t=arr.reduce((a,s)=>a+Number(s.gold)/Number(s.tcPrice),0);
- arr.forEach(s=>s.somado=true);
- g.sessoes.push({id:Date.now()+Math.random(),data:d,hora:arr[arr.length-1].hora,gold:total,tcPrice:total/t,juntado:arr.length});
- salvar();render();toast("Dia somado em um único registro.");
- if(d===hoje()){
-  const box=document.getElementById("todayBox");
-  if(box){box.classList.add("flash");setTimeout(()=>box.classList.remove("flash"),1300)}
- }}
+ if(arr.length<1)return toast("Não há farms registrados neste dia.");
+ const total=arr.reduce((a,s)=>a+Number(s.gold),0),totalTime=arr.reduce((a,s)=>a+Number(s.time||0),0),totalTc=arr.reduce((a,s)=>a+Number(s.gold)/Number(s.tcPrice||S.tcPrice),0);
+ const hunts=[...new Set(arr.map(s=>(s.hunt||"Hunt não informada").trim()).filter(Boolean))];
+ const huntsDetalhes={};
+ arr.forEach(s=>{const h=(s.hunt||"Hunt não informada").trim()||"Hunt não informada";if(!huntsDetalhes[h])huntsDetalhes[h]={hunt:h,gold:0,time:0,tc:0,farms:0};huntsDetalhes[h].gold+=Number(s.gold)||0;huntsDetalhes[h].time+=Number(s.time||0);huntsDetalhes[h].tc+=Number(s.gold)/Number(s.tcPrice||S.tcPrice);huntsDetalhes[h].farms++;});
+ g.sessoes.push({id:Date.now()+Math.random(),data:d,hora:arr[arr.length-1].hora,gold:total,tcPrice:totalTc>0?total/totalTc:S.tcPrice,time:totalTime,hunt:hunts.length+" hunts",juntado:arr.length,resumoDia:true,huntsDetalhes:Object.values(huntsDetalhes),somado:false});
+ salvar();render();toast("Dia somado: "+hunts.length+" hunts.");
+ if(d===hoje()){const box=document.getElementById("todayBox");if(box){box.classList.add("flash");setTimeout(()=>box.classList.remove("flash"),1300)}}}
 
 function checar(g){
  while(true){
@@ -489,11 +547,14 @@ function checar(g){
  if(diasDesde(g)>=30&&!g.mensais.some(m=>m.auto))gerarMensal(g,true);
  if(!g.concluida&&gold(g)>=g.metaGold)g.concluida=new Date().toISOString()}
 function gerarSemanal(g,ds,manual){
- const ss=g.sessoes.filter(s=>ds.includes(s.data)&&!s.somado);
- g.semanais.push({n:g.semanais.length+1,de:ds[0],ate:ds[ds.length-1],dias:ds.length,
-  gold:ss.reduce((a,s)=>a+Number(s.gold),0),tc:ss.reduce((a,s)=>a+Number(s.gold)/Number(s.tcPrice),0),
-  manual:!!manual,em:new Date().toISOString()});
- g.cursor+=ds.length}
+ const fonte=g.sessoes.filter(s=>ds.includes(s.data)&&!s.somado&&!s.resumoDia);
+ const resumos=g.sessoes.filter(s=>ds.includes(s.data)&&s.resumoDia);
+ const ss=fonte.length?fonte:resumos; const hunts={};
+ ss.forEach(s=>{if(s.resumoDia&&Array.isArray(s.huntsDetalhes)){s.huntsDetalhes.forEach(h=>{if(!hunts[h.hunt])hunts[h.hunt]={hunt:h.hunt,gold:0,time:0,tc:0,farms:0};hunts[h.hunt].gold+=h.gold;hunts[h.hunt].time+=h.time;hunts[h.hunt].tc+=h.tc;hunts[h.hunt].farms+=h.farms;});return;}const h=(s.hunt||"Hunt não informada").trim()||"Hunt não informada";if(!hunts[h])hunts[h]={hunt:h,gold:0,time:0,tc:0,farms:0};hunts[h].gold+=Number(s.gold)||0;hunts[h].time+=Number(s.time)||0;hunts[h].tc+=(Number(s.gold)||0)/Number(s.tcPrice||S.tcPrice);hunts[h].farms++;});
+ const hs=Object.values(hunts).map(h=>({...h,pph:h.time>0?h.gold/(h.time/60):0}));
+ const totalGold=ss.reduce((a,s)=>a+Number(s.gold),0),totalTc=ss.reduce((a,s)=>a+(Number(s.tcPrice)?Number(s.gold)/Number(s.tcPrice):0),0),totalTime=ss.reduce((a,s)=>a+Number(s.time||0),0);
+ g.semanais.push({n:g.semanais.length+1,de:ds[0],ate:ds[ds.length-1],dias:ds.length,gold:totalGold,tc:totalTc,time:totalTime,hunts:hs,manual:!!manual,em:new Date().toISOString()});g.cursor+=ds.length}
+
 function gerarMensal(g,auto){
  g.mensais.push({n:g.mensais.length+1,de:g.criada.slice(0,10),ate:hoje(),dias:diasFarm(g).length,
   gold:gold(g),tc:tc(g),auto:!!auto,em:new Date().toISOString()})}
@@ -505,8 +566,64 @@ function relMensal(){
  const g=meta();if(!g.sessoes.length)return toast("Ainda não há farm registrado.");
  gerarMensal(g,false);abaRel="mensal";salvar();render();toast("Relatório mensal gerado.")}
 function limpar(){
- if(!confirm("Isso apaga TODAS as metas, farms e relatórios deste navegador. Continuar?"))return;
- S={metas:[],ativa:null,tcPrice:S.tcPrice};salvar();render();toast("Dados apagados.")}
+ if(!confirm("Isso apaga TODOS os dados do Tibia Farm Tracker, inclusive o desempenho e a meta semanal. Continuar?"))return;
+ S={metas:[],ativa:null,tcPrice:35000,tcBRL:0,nickname:""};
+ try{localStorage.removeItem(CK+"data");localStorage.removeItem("tft_weekly_goal");}catch(e){}
+ try{for(let i=0;i<40;i++)document.cookie=CK+i+"=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";document.cookie=CK+"n=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";}catch(e){}
+ if(window.TibiaFarmRetention){window.TibiaFarmRetention.clearDate();window.TibiaFarmRetention.refresh();}
+ render();toast("Todos os dados foram apagados.")
+}
+function rankingStreakFromDates(dates){
+  const set=new Set(dates);
+  let cur=new Date();cur.setHours(12,0,0,0);
+  let key=hoje();
+  if(!set.has(key)){cur.setDate(cur.getDate()-1);key=cur.getFullYear()+"-"+String(cur.getMonth()+1).padStart(2,"0")+"-"+String(cur.getDate()).padStart(2,"0");}
+  let n=0;
+  while(set.has(key)){
+    n++;
+    cur.setDate(cur.getDate()-1);
+    key=cur.getFullYear()+"-"+String(cur.getMonth()+1).padStart(2,"0")+"-"+String(cur.getDate()).padStart(2,"0");
+  }
+  return n;
+}
+function calcularRankingStats(){
+  const sessoes=(S.metas||[]).flatMap(m=>Array.isArray(m.sessoes)?m.sessoes:[])
+    .filter(s=>!s.resumoDia&&!s.somado);
+  const profit=sessoes.reduce((a,s)=>a+(Number(s.gold)||0),0);
+  const hunts=sessoes.length;
+  const dates=[...new Set(sessoes.map(s=>s.data).filter(Boolean))];
+  return {nickname:(S.nickname||"").trim(),profit,hunts,streak:rankingStreakFromDates(dates)};
+}
+let rankingCache={farm:[],streak:[],hunts:[]},rankingAtual="farm";
+function abrirRanking(){
+  abrir("mRanking");
+  const status=document.getElementById("rankingStatus");
+  if(status)status.textContent="Carregando ranking...";
+  if(window.carregarRanking)window.carregarRanking();
+  else if(status)status.textContent="O ranking ainda está inicializando. Tente novamente em alguns segundos.";
+}
+function mostrarRanking(tipo){
+  rankingAtual=tipo;
+  ["farm","streak","hunts"].forEach(t=>{
+    const b=document.getElementById("rankTab"+(t==="farm"?"Farm":t==="streak"?"Streak":"Hunts"));
+    if(b)b.classList.toggle("on",t===tipo);
+  });
+  renderRankingList();
+}
+function renderRankingList(){
+  const box=document.getElementById("rankingList"),status=document.getElementById("rankingStatus");
+  if(!box)return;
+  const arr=rankingCache[rankingAtual]||[];
+  if(!arr.length){box.innerHTML='<div class="ranking-empty">Nenhum usuário com nickname cadastrado ainda.</div>';return}
+  if(status)status.textContent="Top 10 • atualizado agora";
+  const labels={farm:["💰","Profit total"," GP"],streak:["🔥","Dias seguidos"," dias"],hunts:["⚔️","Hunts registradas"," hunts"]};
+  const meta=labels[rankingAtual];
+  box.innerHTML=arr.map((r,i)=>{
+    const v=rankingAtual==="farm"?Number(r.profit)||0:rankingAtual==="streak"?Number(r.streak)||0:Number(r.hunts)||0;
+    const val=rankingAtual==="farm"?fmt(v):v.toLocaleString("pt-BR");
+    return '<div class="ranking-row"><div class="ranking-pos">'+(i+1)+'</div><div class="ranking-name">'+esc(r.nickname||"Jogador")+'</div><div class="ranking-value"><span>'+meta[0]+'</span>'+val+meta[2]+'</div></div>';
+  }).join("");
+}
 function exportar(){
  const a=document.createElement("a");
  a.href=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:"application/json"}));
@@ -518,13 +635,20 @@ function importar(el){
  r.readAsText(f);el.value=""}
 
 function abrirConfig(){
+ document.getElementById("cfgNickname").value=S.nickname||"";
  document.getElementById("cfgBRL25").value=S.tcBRL>0?Math.round(S.tcBRL*25*100)/100:"";
  abrir("mCfg")}
+function salvarNickname(){
+ const v=(document.getElementById("cfgNickname").value||"").trim();
+ S.nickname=v;salvar();toast(v?"Nickname salvo.":"Nickname removido do ranking.");
+}
 function salvarCotacaoBRL(){
  const v=Number(document.getElementById("cfgBRL25").value);
  S.tcBRL=v>0?v/25:0;salvar();render();toast(S.tcBRL>0?"Cotação salva.":"Cotação em R$ removida.")}
 function setAba(a){aba=a;render()}
 function setAbaRel(a){abaRel=a;render()}
+function setAbaHist(a){abaHist=a;render()}
+function limparFiltroHist(){histDateFilter="";render()}
 
 /* ================= busca de item no modal ================= */
 const inpName=document.getElementById("gName");
@@ -670,39 +794,31 @@ function ringSVG(p){
  'stroke-dasharray="'+c+'" stroke-dashoffset="'+(c-c*p/100)+'" transform="rotate(-90 27 27)"/>'+
  '<text x="27" y="31" text-anchor="middle" font-size="13" font-weight="700" fill="#e9f6ff">'+Math.round(p)+'%</text></svg>'}
 
+function resumoDia(g,d){return g.sessoes.find(s=>s.resumoDia&&s.data===d)||null}
 function tabelaHist(g){
- const ds=diasFarm(g).reverse();
+ const ds=diasFarm(g).slice().reverse();
  if(!ds.length)return '<div class="empty"><b>Nenhum farm registrado ainda</b>Use “Registrar Farm” para lançar o primeiro valor do dia.</div>';
- let html='<div class="tablewrap"><table><thead><tr><th>Data</th><th>Farm (Gold)</th><th>Tibia Coin</th>'+
-  '<th>Total do Dia</th><th></th></tr></thead><tbody>';
- ds.forEach(d=>{
-  const arr=doDia(g,d);let ac=0,at=0;
-  arr.forEach(s=>{
-   ac+=Number(s.gold);at=ac/S.tcPrice;
-   html+='<tr><td>'+brData(d)+(d===hoje()?' <span class="today-tag">(Hoje)</span>':'')+
-    '</td><td><div class="cell"><span class="coin">G</span>'+fmt(s.gold)+'</div></td>'+
-    '<td><div class="cell"><span class="coin tc">TC</span>'+fmt2(Number(s.gold)/S.tcPrice)+'</div></td>'+
-    '<td><div class="cell"><span class="coin">G</span>'+fmt(ac)+' <span class="coin tc" style="margin-left:6px">TC</span>'+fmt2(at)+'</div></td>'+
-    '<td><div class="rowbtns"><button class="mini" onclick="addNoDia(\''+d+'\')">+ Adicionar</button>'+
-    '<button class="mini icon red" onclick="excluirFarm(\''+s.id+'\')" title="Excluir" aria-label="Excluir">🗑</button></div></td></tr>'});
-  html+='<tr class="total"><td>Total do Dia</td><td><div class="cell"><span class="coin">G</span>'+fmt(goldDia(g,d))+
-   '</div></td><td><div class="cell"><span class="coin tc">TC</span>'+fmt2(tcDia(g,d))+'</div></td><td></td>'+
-   '<td><div class="rowbtns">'+(d===hoje()
-    ?'<button class="mini btn-green" onclick="somarDia(\''+d+'\')">Σ Somar do Dia</button>'
-    :'<span class="muted" style="font-size:11px">dia encerrado</span>')+'</div></td></tr>'});
+ let h='<div class="history-tools"><div class="tabs mini-history-tabs"><button class="'+(abaHist==='dia'?'on':'')+'" onclick="setAbaHist(\'dia\')">Resumo diário</button><button class="'+(abaHist==='hunts'?'on':'')+'" onclick="setAbaHist(\'hunts\')">Hunts feitas</button></div><div class="performance-filter history-date-filter"><label for="histDateFilter">Buscar dia</label><input id="histDateFilter" type="date" value="'+esc(histDateFilter)+'"><button type="button" onclick="limparFiltroHist()">Todos</button></div></div>';
+ if(abaHist==='hunts')return h+tabelaHistHunts(g,ds);
+ const filtered=histDateFilter?ds.filter(d=>d===histDateFilter):ds;
+ if(!filtered.length)return h+'<div class="empty"><b>Nenhum registro nesta data.</b></div>';
+ let html=h+'<div class="tablewrap"><table><thead><tr><th>Data</th><th>Hunts</th><th>Tempo</th><th>Farm (Gold)</th><th>Profit/h</th><th>Tibia Coin</th><th></th></tr></thead><tbody>';
+ filtered.forEach(d=>{const arr=doDia(g,d),r=resumoDia(g,d),count=[...new Set(arr.map(s=>(s.hunt||'Hunt não informada').trim()))].filter(Boolean).length,total=goldDia(g,d),time=arr.reduce((a,s)=>a+Number(s.time||0),0),pph=time>0?total/(time/60):0,huntsText=r&&r.hunt?r.hunt:(count+(count===1?' hunt':' hunts'));
+  html+='<tr><td>'+brData(d)+(d===hoje()?' <span class="today-tag">(Hoje)</span>':'')+'</td><td><b>'+esc(huntsText)+'</b></td><td>'+(time?time+' min':'—')+'</td><td><div class="cell"><span class="coin">G</span>'+fmt(total)+'</div></td><td><div class="cell"><span class="coin">G</span>'+fmt(pph)+'/h</div></td><td><div class="cell"><span class="coin tc">TC</span>'+fmt2(tcDia(g,d))+'</div></td><td><div class="rowbtns"></div></td></tr>';});
  return html+'</tbody></table></div>'}
-
+function tabelaHistHunts(g,ds){
+ const filtered=histDateFilter?ds.filter(d=>d===histDateFilter):ds;
+ if(!filtered.length)return '<div class="empty"><b>Nenhuma hunt nesta data.</b></div>';
+ let html='<div class="tablewrap"><table><thead><tr><th>Data</th><th>Hunt</th><th>Tempo</th><th>Profit</th><th>Profit/h</th><th>TC</th></tr></thead><tbody>';
+ filtered.forEach(d=>{doDia(g,d).forEach(s=>{const mins=Number(s.time||0),profit=Number(s.gold)||0,pph=mins>0?profit/(mins/60):0;html+='<tr><td>'+brData(d)+'</td><td><b>'+esc(s.hunt||'Hunt não informada')+'</b></td><td>'+mins+' min</td><td class="goldtxt">'+fmt(profit)+' GP</td><td>'+fmt(pph)+'/h</td><td class="cyantxt">'+fmt2(profit/Number(s.tcPrice||S.tcPrice))+' TC</td></tr>';});});
+ return html+'</tbody></table></div>'}
 function tabelaRel(g,tipo){
  const arr=(tipo==="semanal"?g.semanais:g.mensais).slice().reverse();
- if(!arr.length)return '<div class="empty"><b>Nenhum relatório '+tipo+' ainda</b>'+
-  (tipo==="semanal"?'Gere um manualmente com 3+ dias ou espere fechar 7 dias de farm.'
-   :'O primeiro é criado automaticamente 30 dias após a criação da meta.')+'</div>';
- return '<div class="tablewrap"><table><thead><tr><th>#</th><th>Período</th><th>Dias</th><th>Gold</th><th>Tibia Coin</th><th>Tipo</th></tr></thead><tbody>'+
-  arr.map(r=>'<tr><td>'+r.n+'</td><td>'+brData(r.de)+' — '+brData(r.ate)+'</td><td>'+r.dias+'</td>'+
-  '<td><div class="cell"><span class="coin">G</span>'+fmt(r.gold)+'</div></td>'+
-  '<td><div class="cell"><span class="coin tc">TC</span>'+fmt2(r.tc)+'</div></td>'+
-  '<td>'+(r.manual||(!r.auto&&tipo==="mensal")?"Manual":"Automático")+'</td></tr>').join("")+'</tbody></table></div>'}
-
+ if(!arr.length)return '<div class="empty"><b>Nenhum relatório '+tipo+' ainda</b>'+(tipo==="semanal"?'Gere um manualmente com 3+ dias ou espere fechar 7 dias de farm.':'O primeiro é criado automaticamente 30 dias após a criação da meta.')+'</div>';
+ let html='<div class="tablewrap"><table><thead><tr><th>#</th><th>Período</th><th>Dias</th><th>Gold</th><th>TC</th><th>Tempo</th><th>Tipo</th></tr></thead><tbody>';
+ arr.forEach(r=>{html+='<tr><td>'+r.n+'</td><td>'+brData(r.de)+' — '+brData(r.ate)+'</td><td>'+r.dias+'</td><td><div class="cell"><span class="coin">G</span>'+fmt(r.gold)+'</div></td><td><div class="cell"><span class="coin tc">TC</span>'+fmt2(r.tc)+'</div></td><td>'+((r.time||0)?Math.floor(r.time/60)+'h'+((r.time%60)?String(r.time%60).padStart(2,'0')+'m':''):'—')+'</td><td>'+(r.manual||(!r.auto&&tipo==="mensal")?"Manual":"Automático")+'</td></tr>';
+  if(tipo==="semanal"&&Array.isArray(r.hunts)&&r.hunts.length){html+='<tr><td></td><td colspan="6"><div class="weekly-hunts"><b>Valores por Hunt</b><table class="inner-table"><thead><tr><th>Hunt</th><th>Farms</th><th>Tempo</th><th>Profit</th><th>Profit/h</th><th>TC</th></tr></thead><tbody>'+r.hunts.slice().sort((a,b)=>b.gold-a.gold).map(h=>'<tr><td>⚔️ '+esc(h.hunt)+'</td><td>'+h.farms+'</td><td>'+h.time+' min</td><td class="goldtxt">'+fmt(h.gold)+' GP</td><td>'+fmt(h.pph)+'/h</td><td class="cyantxt">'+fmt2(h.tc)+' TC</td></tr>').join('')+'</tbody></table></div></td></tr>';}});
+ html+='</tbody></table></div>';return html}
 function render(){
  const app=document.getElementById("app"),g=meta();
  document.getElementById("tcPrice").value=S.tcPrice;
@@ -769,9 +885,11 @@ function render(){
      <div class="val goldtxt"><span class="coin">G</span>${fmt(goldDia(g,d))} <small>GP</small></div>
      <div class="val tc"><span class="coin tc">TC</span>${fmt2(tcDia(g,d))} <small>TC</small></div>
     </div>
-    <div class="field"><label>Adicionar Farm</label>
-     <input id="farmGold" type="number" min="1" placeholder="Valor em Gold"
-      onkeydown="if(event.key==='Enter')registrarFarm()"></div>
+    <div class="field"><label>Nome da Hunt</label><input id="farmHunt" type="text" maxlength="80" placeholder="Ex.: Rotten Blood"></div>
+    <div class="grid2">
+     <div class="field"><label>Tempo de Hunt (minutos)</label><input id="farmTime" type="number" min="1" step="1" placeholder="Ex.: 60"></div>
+     <div class="field"><label>Valor em Gold</label><input id="farmGold" type="number" min="1" placeholder="Ex.: 2000000" onkeydown="if(event.key==='Enter')registrarFarm()"></div>
+    </div>
     <div class="actions"><button class="btn-green" onclick="registrarFarm()">Registrar Farm</button></div>
    </section>
 
@@ -792,9 +910,6 @@ function render(){
     <div class="sum">
      <div class="line"><span class="coin">G</span><div><small>Gold Total</small><b class="goldtxt">${fmt(tot)} GP</b></div></div>
      <div class="line"><span class="coin tc">TC</span><div><small>Tibia Coin Total</small><b class="cyantxt">${fmt2(ttc)} TC</b></div></div>
-     <div class="line"><span class="coin">G</span><div><small>Falta para a Meta</small><b class="goldtxt">${fmt(falta)} GP</b>
-      <b class="cyantxt" style="font-size:12.5px">${fmt2(faltaTc)} TC</b>
-      ${S.tcBRL>0?'<div class="muted" style="font-size:10.5px;margin-top:2px">≈ '+brl(faltaTc*S.tcBRL)+'</div>':''}</div></div>
      <div class="line"><span class="coin record">🏆</span><div><small>Melhor Dia</small>
       ${recorde?'<b class="goldtxt">'+fmt(recorde.gold)+' GP</b><div class="muted" style="font-size:10.5px;margin-top:2px">em '+brData(recorde.data)+'</div>':'<b class="goldtxt">—</b>'}
      </div></div>
@@ -837,6 +952,7 @@ function render(){
  </div>`;
 }
 
+document.addEventListener('change',e=>{if(e.target&&e.target.id==='histDateFilter'){histDateFilter=e.target.value||'';render()}});
 /* dropdown de metas */
 document.getElementById("goalSelect").addEventListener("click",e=>{
  if(e.target.closest(".menu"))return;menuAberto=!menuAberto;
@@ -881,7 +997,7 @@ window.onAuthBtn=function(){
 };
 
 carregar();render();
-window.render=render;window.salvarLocal=salvar;
+window.render=render;window.salvarLocal=salvar;window.calcularRankingStats=calcularRankingStats;
 window.updateAuthUI();
 </script>
 
@@ -889,7 +1005,7 @@ window.updateAuthUI();
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
  from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc }
+import { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs }
  from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -932,6 +1048,26 @@ async function pullCloud(uid){
  window.updateAuthUI && window.updateAuthUI();
 }
 
+window.carregarRanking = async function(){
+ try{
+  const base=collection(db,"rankings");
+  const [a,b,c]=await Promise.all([
+   getDocs(query(base,orderBy("profit","desc"),limit(10))),
+   getDocs(query(base,orderBy("streak","desc"),limit(10))),
+   getDocs(query(base,orderBy("hunts","desc"),limit(10)))
+  ]);
+  const parse=snap=>snap.docs.map(d=>({id:d.id,...d.data()})).filter(r=>String(r.nickname||"").trim());
+  rankingCache.farm=parse(a);rankingCache.streak=parse(b);rankingCache.hunts=parse(c);
+  renderRankingList();
+ }catch(e){
+  console.error("Falha ao carregar ranking:",e);
+  const status=document.getElementById("rankingStatus");
+  const box=document.getElementById("rankingList");
+  if(status)status.textContent="Não foi possível carregar o ranking.";
+  if(box)box.innerHTML='<div class="ranking-empty">Verifique as regras do Firestore para a coleção <b>rankings</b>.</div>';
+ }
+};
+
 window.loginGoogle = async function(){
  try{ await signInWithPopup(auth, provider); }
  catch(e){
@@ -950,5 +1086,458 @@ onAuthStateChanged(auth, async (user)=>{
  else{ window.updateAuthUI && window.updateAuthUI(); }
 });
 </script>
+
+<style>
+/* === V2 Retention Dashboard === */
+.retention-dashboard{
+  margin:28px auto 0;
+  max-width:1180px;
+  display:grid;
+  gap:18px;
+}
+.retention-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+}
+.retention-title{margin:0;font-size:1.35rem}
+.retention-subtitle{margin:4px 0 0;opacity:.72;font-size:.9rem}
+.retention-grid{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:12px;
+}
+.retention-card{
+  border:1px solid rgba(127,127,127,.18);
+  border-radius:14px;
+  padding:16px;
+  background:var(--card-bg,rgba(127,127,127,.06));
+  box-shadow:0 5px 18px rgba(0,0,0,.04);
+}
+.retention-label{font-size:.78rem;opacity:.68;margin-bottom:7px}
+.retention-value{font-size:1.35rem;font-weight:800}
+.retention-small{font-size:.76rem;opacity:.65;margin-top:4px}
+.history-tools{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}.mini-history-tabs{margin:0}.history-date-filter{margin-left:auto}.history-date-filter label{font-size:.78rem}.retention-section{
+  border:1px solid rgba(127,127,127,.18);
+  border-radius:14px;
+  padding:18px;
+  background:var(--card-bg,rgba(127,127,127,.06));
+}
+.retention-section h3{margin:0 0 14px;font-size:1rem}
+.retention-chart-wrap{height:220px;position:relative}
+.retention-chart{
+  width:100%;height:100%;
+  display:block;
+}
+.retention-empty{
+  min-height:140px;display:grid;place-items:center;
+  text-align:center;opacity:.65;padding:20px;
+}
+.retention-records{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;
+}
+.retention-record{
+  padding:12px;border-radius:10px;
+  background:rgba(127,127,127,.07);
+}
+.retention-record strong{display:block;margin-top:4px}
+.retention-progress{
+  height:10px;border-radius:999px;overflow:hidden;
+  background:rgba(127,127,127,.15);margin:10px 0 7px;
+}
+.retention-progress > span{
+  display:block;height:100%;width:0;border-radius:inherit;
+  background:currentColor;transition:width .35s ease;
+}
+.retention-meta-row{
+  display:flex;justify-content:space-between;gap:12px;
+  font-size:.82rem;opacity:.78;
+}
+@media(max-width:1100px){
+  .retention-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:850px){
+  .retention-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .retention-records{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:520px){
+  .retention-grid{grid-template-columns:1fr 1fr}
+  .retention-records{grid-template-columns:1fr}
+  .retention-dashboard{margin-top:18px}
+  .retention-section{padding:14px}
+}
+</style>
+
+<section id="retentionDashboard" class="retention-dashboard" aria-label="Seu desempenho">
+  <div class="retention-header">
+    <div>
+      <h2 class="retention-title">📊 Seu desempenho</h2>
+      <p class="retention-subtitle">Acompanhe sua evolução e descubra suas melhores hunts.</p>
+    </div>
+    <div class="performance-filter"><label for="rtDateFilter">Data</label><input id="rtDateFilter" type="date"><button type="button" id="rtClearDate">Todas</button></div>
+  </div>
+
+  <div class="retention-grid">
+    <div class="retention-card">
+      <div class="retention-label">💰 Profit total</div>
+      <div id="rtTotalProfit" class="retention-value">0</div>
+      <div class="retention-small">em todos os farms salvos</div>
+    </div>
+    <div class="retention-card">
+      <div class="retention-label">💵 Profit médio</div>
+      <div id="rtAvgProfit" class="retention-value">0</div>
+      <div class="retention-small">média por hunt</div>
+    </div>
+    <div class="retention-card">
+      <div class="retention-label">⏱️ Tempo farmado</div>
+      <div id="rtTotalTime" class="retention-value">0h</div>
+      <div class="retention-small">tempo acumulado</div>
+    </div>
+    <div class="retention-card">
+      <div class="retention-label">📈 Profit/h médio</div>
+      <div id="rtAvgProfitHour" class="retention-value">0</div>
+      <div class="retention-small">média dos seus registros</div>
+    </div>
+    <div class="retention-card">
+      <div class="retention-label">🔥 Dias de constância</div>
+      <div id="rtStreak" class="retention-value">0</div>
+      <div class="retention-small">se faltar um dia, a sequência zera</div>
+    </div>
+  </div>
+
+  <div class="retention-section">
+    <h3>📈 Evolução do Profit/h</h3>
+    <div id="rtChartEmpty" class="retention-empty">Registre alguns farms para começar a visualizar sua evolução.</div>
+    <div id="rtChartWrap" class="retention-chart-wrap" hidden>
+      <canvas id="rtProfitChart" class="retention-chart"></canvas>
+    </div>
+  </div>
+
+  <div class="retention-section">
+    <h3>🏆 Seus recordes</h3>
+    <div id="rtRecords" class="retention-records">
+      <div class="retention-record">💰 Maior profit<strong>—</strong></div>
+      <div class="retention-record">📈 Maior profit/h<strong>—</strong></div>
+      <div class="retention-record">🗺️ Melhor hunt<strong>—</strong></div>
+    </div>
+  </div>
+
+  <div class="retention-section">
+    <h3>🎯 Meta de profit semanal</h3>
+    <div class="retention-meta-row">
+      <span id="rtGoalText">Defina uma meta para esta semana.</span>
+      <strong id="rtGoalPct">0%</strong>
+    </div>
+    <div class="retention-progress"><span id="rtGoalBar"></span></div>
+<button type="button" id="setWeeklyGoalBtn" class="secondary-btn" style="margin-top:10px">
+  ⚙️ Definir meta semanal
+</button>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  const b=document.getElementById('setWeeklyGoalBtn');
+  if(!b)return;
+  b.addEventListener('click',()=>{
+    const input=document.getElementById('weeklyGoalInput');
+    if(input) input.value=localStorage.getItem('tft_weekly_goal')||'1000000';
+    const m=document.getElementById('mWeeklyGoal');
+    if(m)m.classList.add('open');
+    setTimeout(()=>input&&input.focus(),60);
+  });
+});
+function salvarMetaSemanalModal(){
+ const v=Number(document.getElementById('weeklyGoalInput').value);
+ if(!(v>0))return toast('Informe uma meta válida.');
+ localStorage.setItem('tft_weekly_goal',v);
+ document.getElementById('mWeeklyGoal').classList.remove('open');
+ if(window.TibiaFarmRetention)window.TibiaFarmRetention.refresh();
+ toast('Meta semanal salva.');
+}
+</script>
+
+    <div class="retention-meta-row">
+      <span id="rtGoalCurrent">0</span>
+      <span id="rtGoalTarget">Meta: 1.000.000</span>
+    </div>
+  </div>
+</section>
+
+<script>
+/* === Tibia Farm Tracker V2: retention dashboard (corrigido) === */
+(function(){
+  const CK='tibiaFarm3_';
+  let selectedDate='';
+
+  function number(v){
+    if(typeof v==='number'&&isFinite(v))return v;
+    if(v==null)return 0;
+    let s=String(v).trim().replace(/\s/g,'');
+    if(!s)return 0;
+    s=s.replace(/[^\d,.\-]/g,'');
+    if(s.includes(',')&&s.includes('.')){
+      if(s.lastIndexOf(',')>s.lastIndexOf('.')) s=s.replace(/\./g,'').replace(',','.');
+      else s=s.replace(/,/g,'');
+    }else if(s.includes(',')){ s=s.replace(',','.'); }
+    const n=parseFloat(s);
+    return isFinite(n)?n:0;
+  }
+
+  function nf(n){return Math.round(Number(n)||0).toLocaleString('pt-BR')}
+
+  /* ---- leitura de dados: estado em memória > cookies > localStorage ---- */
+  function decode(b){
+    try{const o=JSON.parse(decodeURIComponent(escape(atob(b))));return o&&Array.isArray(o.metas)?o:null}catch(e){return null}
+  }
+  function fromCookies(){
+    try{
+      const m=document.cookie.match(new RegExp('(?:^|; )'+CK+'n=([^;]*)'));
+      if(!m)return null;
+      const n=Number(m[1]);let b='';
+      for(let i=0;i<n;i++){const c=document.cookie.match(new RegExp('(?:^|; )'+CK+i+'=([^;]*)'));if(c)b+=c[1]}
+      return b?decode(b):null;
+    }catch(e){return null}
+  }
+  function getState(){
+    if(window.S&&Array.isArray(window.S.metas)&&window.S.metas.length)return window.S;
+    const ck=fromCookies();if(ck)return ck;
+    try{const raw=localStorage.getItem(CK+'data');if(raw){const d=decode(raw);if(d)return d}}catch(e){}
+    return null;
+  }
+  function rawSessions(){
+    const st=getState();
+    if(!st||!Array.isArray(st.metas))return [];
+    const ativa=st.metas.find(m=>String(m.id)===String(st.ativa));
+    const metas=ativa&&Array.isArray(ativa.sessoes)&&ativa.sessoes.length?[ativa]:st.metas;
+    const out=[];
+    metas.forEach(m=>{if(m&&Array.isArray(m.sessoes))out.push(...m.sessoes)});
+    return out;
+  }
+
+  function normalize(o){
+    if(!o||typeof o!=='object')return null;
+    if(o.resumoDia||o.somado)return null;              // resumo de dia duplicaria os valores
+    const profit=number(o.gold!=null?o.gold:o.profit);
+    const minutes=number(o.time!=null?o.time:(o.tempo!=null?o.tempo:o.minutes));
+    const hours=minutes/60;
+    const pph=hours>0?profit/hours:0;
+    const hunt=String(o.hunt||o.local||o.nome||'Hunt não informada').trim()||'Hunt não informada';
+    const date=o.data||o.date||o.createdAt||null;
+    if(!date)return null;
+    return {profit,time:hours,pph,hunt,date:String(date),hora:String(o.hora||''),id:String(o.id||'')};
+  }
+
+  function getFarms(){
+    const seen=new Set(),out=[];
+    for(const s of rawSessions()){
+      const n=normalize(s);if(!n)continue;
+      const sig=n.id||[n.date,n.hora,n.profit,n.time,n.hunt].join('|');
+      if(seen.has(sig))continue;seen.add(sig);out.push(n);
+    }
+    return out.sort((a,b)=>a.date===b.date?String(a.hora).localeCompare(String(b.hora)):a.date.localeCompare(b.date));
+  }
+
+  function dateObj(v){
+    const m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(m)return new Date(Number(m[1]),Number(m[2])-1,Number(m[3]),12,0,0);
+    const d=new Date(v);return isNaN(d)?new Date(NaN):d;
+  }
+  function dateKey(v){
+    if(typeof v==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v))return v.slice(0,10);
+    const d=dateObj(v);
+    if(isNaN(d))return '';
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function todayKey(){const d=new Date();return dateKey(d)}
+  function formatHours(h){
+    h=Number(h)||0;const total=Math.round(h*60),hh=Math.floor(total/60),mm=total%60;
+    if(hh&&mm)return hh+'h '+String(mm).padStart(2,'0')+'min';
+    if(hh)return hh+'h';
+    return mm+'min';
+  }
+  function brData(k){return k?k.split('-').reverse().join('/'):''}
+
+  /* sequência: conta a partir de hoje ou de ontem (o dia de hoje ainda pode ser farmado) */
+  function streak(farms){
+    const days=new Set(farms.map(x=>dateKey(x.date)).filter(Boolean));
+    if(!days.size)return 0;
+    let d=new Date();d.setHours(12,0,0,0);
+    if(!days.has(dateKey(d)))d.setDate(d.getDate()-1);
+    let count=0;
+    while(days.has(dateKey(d))){count++;d.setDate(d.getDate()-1)}
+    return count;
+  }
+
+  /* pontos do gráfico: por dia (visão geral) ou por hunt (data filtrada) */
+  function chartPoints(farms,filtered){
+    if(filtered){
+      return farms.map(f=>({label:f.hora||f.hunt,value:f.pph}));
+    }
+    const byDay=new Map();
+    farms.forEach(f=>{
+      const k=dateKey(f.date);if(!k)return;
+      const cur=byDay.get(k)||{gold:0,time:0};
+      cur.gold+=f.profit;cur.time+=f.time;byDay.set(k,cur);
+    });
+    return [...byDay.entries()].sort((a,b)=>a[0].localeCompare(b[0]))
+      .map(([k,v])=>({label:brData(k).slice(0,5),value:v.time>0?v.gold/v.time:0}));
+  }
+
+  function drawChart(points){
+    const wrap=document.getElementById('rtChartWrap');
+    const empty=document.getElementById('rtChartEmpty');
+    const canvas=document.getElementById('rtProfitChart');
+    if(!canvas||!wrap||!empty)return;
+    const show=(el,v)=>{el.hidden=!v;el.style.display=v?'':'none'};
+    if(points.length<2){
+      show(wrap,false);show(empty,true);
+      empty.textContent=points.length===1
+        ?'Registre mais um farm para começar a comparar sua evolução.'
+        :'Nenhum farm encontrado para exibir no gráfico.';
+      return;
+    }
+    show(wrap,true);show(empty,false);
+    const ctx=canvas.getContext('2d');
+    const dpr=window.devicePixelRatio||1;
+    const rect=canvas.getBoundingClientRect();
+    if(!rect.width||!rect.height)return;
+    canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const w=rect.width,h=rect.height;
+    ctx.clearRect(0,0,w,h);
+    /* usa a cor de texto do tema para a linha e os rótulos ficarem legíveis */
+    const cor=getComputedStyle(canvas).color||'#7ee0c0';
+    ctx.strokeStyle=cor;ctx.fillStyle=cor;
+    const vals=points.map(p=>p.value);
+    let max=Math.max(...vals),min=Math.min(...vals);
+    if(!isFinite(max))max=1;if(!isFinite(min))min=0;
+    if(max===min){max=max||1;min=0}
+    const pad={l:58,r:16,t:18,b:30};
+    const iw=w-pad.l-pad.r,ih=h-pad.t-pad.b;
+    ctx.font='12px system-ui, sans-serif';
+    ctx.globalAlpha=.45;
+    for(let i=0;i<4;i++){
+      const y=pad.t+ih*i/3;
+      ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();
+      ctx.fillText(nf(max-(max-min)*i/3),4,y+4);
+    }
+    const xAt=i=>pad.l+(vals.length===1?iw/2:iw*i/(vals.length-1));
+    const yAt=v=>pad.t+ih-(v-min)/(max-min||1)*ih;
+    ctx.textAlign='center';
+    points.forEach((p,i)=>{
+      if(points.length>8&&i%Math.ceil(points.length/8)!==0)return;
+      ctx.fillText(String(p.label||''),xAt(i),h-10);
+    });
+    ctx.textAlign='left';
+    ctx.globalAlpha=1;
+    ctx.beginPath();
+    vals.forEach((v,i)=>{const x=xAt(i),y=yAt(v);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+    ctx.lineWidth=2.5;ctx.stroke();
+    vals.forEach((v,i)=>{ctx.beginPath();ctx.arc(xAt(i),yAt(v),3.5,0,Math.PI*2);ctx.fill()});
+  }
+
+  function setRecords(farms){
+    const box=document.getElementById('rtRecords');
+    if(!box)return;
+    const vazio='<div class="retention-record">💰 Maior profit<strong>—</strong></div><div class="retention-record">📈 Maior profit/h<strong>—</strong></div><div class="retention-record">🗺️ Melhor hunt<strong>—</strong></div>';
+    if(!farms.length){box.innerHTML=vazio;return}
+    const byProfit=farms.reduce((a,b)=>b.profit>a.profit?b:a);
+    const comTempo=farms.filter(f=>f.time>0);
+    const byPph=comTempo.length?comTempo.reduce((a,b)=>b.pph>a.pph?b:a):null;
+    /* melhor hunt = maior profit/h somando todos os registros da mesma hunt */
+    const porHunt=new Map();
+    farms.forEach(f=>{const c=porHunt.get(f.hunt)||{gold:0,time:0};c.gold+=f.profit;c.time+=f.time;porHunt.set(f.hunt,c)});
+    let melhor=null;
+    porHunt.forEach((v,k)=>{const pph=v.time>0?v.gold/v.time:0;if(!melhor||pph>melhor.pph)melhor={hunt:k,pph}});
+    box.innerHTML=[
+      ['💰 Maior profit',nf(byProfit.profit)+' ('+brData(dateKey(byProfit.date))+')'],
+      ['📈 Maior profit/h',byPph?nf(byPph.pph)+'/h':'—'],
+      ['🗺️ Melhor hunt',melhor&&melhor.pph>0?melhor.hunt+' · '+nf(melhor.pph)+'/h':'—']
+    ].map(x=>'<div class="retention-record">'+x[0]+'<strong>'+x[1]+'</strong></div>').join('');
+  }
+
+  function render(){
+    const all=getFarms();
+    const input=document.getElementById('rtDateFilter');
+    if(input){
+      input.max=todayKey();
+      if(input.value!==selectedDate)input.value=selectedDate;
+    }
+    const filtrando=!!selectedDate;
+    const farms=filtrando?all.filter(x=>dateKey(x.date)===selectedDate):all;
+
+    const sub=document.querySelector('.retention-subtitle');
+    if(sub){
+      sub.textContent=filtrando
+        ?(farms.length?'Mostrando '+farms.length+(farms.length===1?' farm':' farms')+' de '+brData(selectedDate)+'.'
+                      :'Nenhum farm registrado em '+brData(selectedDate)+'.')
+        :'Acompanhe sua evolução e descubra suas melhores hunts.';
+    }
+
+    const totalProfit=farms.reduce((s,x)=>s+x.profit,0);
+    const totalTime=farms.reduce((s,x)=>s+x.time,0);
+    const avgProfit=farms.length?totalProfit/farms.length:0;
+    /* profit/h médio ponderado pelo tempo (média simples distorcia hunts curtas) */
+    const avgPph=totalTime>0?totalProfit/totalTime:0;
+
+    const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v};
+    set('rtTotalProfit',nf(totalProfit));
+    set('rtAvgProfit',nf(avgProfit));
+    set('rtTotalTime',formatHours(totalTime));
+    set('rtAvgProfitHour',nf(avgPph));
+    set('rtStreak',streak(all));
+
+    setRecords(farms);
+
+    const goal=number(localStorage.getItem('tft_weekly_goal'))||1000000;
+    const now=new Date();now.setHours(0,0,0,0);
+    const start=new Date(now);start.setDate(now.getDate()-((now.getDay()+6)%7));
+    const startKey=dateKey(start);
+    const weekProfit=all.filter(x=>dateKey(x.date)>=startKey).reduce((s,x)=>s+x.profit,0);
+    const pct=goal>0?Math.min(100,Math.round(weekProfit/goal*100)):0;
+    set('rtGoalText',pct>=100?'🎉 Meta semanal atingida!':'Semana desde '+brData(startKey)+'. Continue registrando suas hunts.');
+    set('rtGoalPct',pct+'%');
+    set('rtGoalCurrent',nf(weekProfit));
+    set('rtGoalTarget','Meta: '+nf(goal));
+    const bar=document.getElementById('rtGoalBar');if(bar)bar.style.width=pct+'%';
+
+    drawChart(chartPoints(farms,filtrando));
+  }
+
+  window.TibiaFarmRetention={
+    refresh:render,
+    setDate:function(d){selectedDate=d||'';render()},
+    clearDate:function(){selectedDate='';render()},
+    setWeeklyGoal:function(v){v=number(v);if(v>0){localStorage.setItem('tft_weekly_goal',v);render()}}
+  };
+
+  /* atualiza sempre que o app salvar ou re-renderizar */
+  function hook(name){
+    const orig=window[name];
+    if(typeof orig!=='function'||orig.__rtHooked)return;
+    const wrapped=function(){const r=orig.apply(this,arguments);try{render()}catch(e){}return r};
+    wrapped.__rtHooked=true;window[name]=wrapped;
+  }
+
+  function start(){
+    const df=document.getElementById('rtDateFilter'),clear=document.getElementById('rtClearDate');
+    if(df){
+      const onChange=()=>{selectedDate=df.value||'';render()};
+      df.addEventListener('change',onChange);
+      df.addEventListener('input',onChange);
+    }
+    if(clear)clear.addEventListener('click',()=>{selectedDate='';if(df)df.value='';render()});
+    hook('salvar');hook('render');
+    window.addEventListener('storage',render);
+    window.addEventListener('resize',()=>render());
+    render();
+    setTimeout(render,600);
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);
+  else start();
+})();
+</script>
+
 </body>
 </html>

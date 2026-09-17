@@ -1032,11 +1032,25 @@ const provider = new GoogleAuthProvider();
 
 function refDoUsuario(uid){ return doc(db, "farmTrackers", uid); }
 
-async async function pushCloud(){
+async function pushCloud(){
  const u = window.currentUser;
  if(!u || !window.S) return;
- try{ await setDoc(refDoUsuario(u.uid), JSON.parse(JSON.stringify(window.S))); }
- catch(e){ console.error("Falha ao salvar na nuvem:", e); }
+ try{
+  await setDoc(refDoUsuario(u.uid), JSON.parse(JSON.stringify(window.S)));
+
+  // Publica somente as estatísticas necessárias para o ranking.
+  const stats = window.calcularRankingStats ? window.calcularRankingStats() : null;
+  const rankRef = doc(db, "rankings", u.uid);
+  if(stats && stats.nickname){
+   await setDoc(rankRef, {
+    nickname: stats.nickname,
+    profit: stats.profit,
+    hunts: stats.hunts,
+    streak: stats.streak,
+    updatedAt: new Date()
+   });
+  }
+ }catch(e){ console.error("Falha ao salvar na nuvem:", e); }
 }
 
 async function pullCloud(uid){

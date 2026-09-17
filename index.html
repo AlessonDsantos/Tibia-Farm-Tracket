@@ -103,10 +103,16 @@ button:focus-visible,.select:focus-visible,input:focus-visible{outline:2px solid
  box-shadow:0 0 0 1px #1d5f8c,0 0 9px rgba(76,194,241,.4)}
 .coin.days{font-size:11px;color:#2b1547;background:radial-gradient(circle at 34% 30%,#e6d1ff,#a978ff 58%,#6b3fb0);
  box-shadow:0 0 0 1px #4c2a80,0 0 9px rgba(169,120,255,.4)}
+.coin.record{font-size:11px;color:#4a2405;background:radial-gradient(circle at 34% 30%,#ffe3a8,#f0973f 58%,#b85f14);
+ box-shadow:0 0 0 1px #7a3f0c,0 0 9px rgba(240,151,63,.4)}
 .goldtxt{color:var(--gold2)}.cyantxt{color:#8fd8ff}.greentxt{color:#5ff0b4}
 
 /* farm do dia */
 .today{border:1px solid #1b3d57;border-radius:10px;background:#051220;padding:11px 12px;display:grid;gap:9px}
+@keyframes flashHighlight{0%{box-shadow:0 0 0 0 rgba(37,201,140,0);border-color:#1b3d57}
+ 25%{box-shadow:0 0 0 7px rgba(37,201,140,.32);border-color:#25c98c}
+ 100%{box-shadow:0 0 0 0 rgba(37,201,140,0);border-color:#1b3d57}}
+.today.flash{animation:flashHighlight 1.2s ease}
 .today .val{margin:0}
 .field{margin-top:12px}
 .field label{display:block;color:var(--muted);font-size:11px;margin-bottom:6px}
@@ -133,6 +139,7 @@ button:focus-visible,.select:focus-visible,input:focus-visible{outline:2px solid
 .minitabs button{padding:7px;font-size:12px;border-color:#1d4462;background:#071a2b;color:#9cbdd4}
 .minitabs button.on{color:var(--gold2);border-color:#7d5f20;background:#241a08}
 .empty{text-align:center;color:var(--muted);font-size:11.5px;line-height:1.5;padding:16px 4px}
+.muted{color:var(--muted)}
 .empty b{display:block;color:#b9d2e4;font-size:12.5px;margin-bottom:4px;font-weight:600}
 
 /* tabs + tabela */
@@ -245,6 +252,17 @@ tr.total td:first-child{font-weight:700}
 
 <div class="modal" id="mCfg"><div class="box">
  <h3>Configurações</h3><p>Metas, dados e manutenção do tracker.</p>
+ <div class="field" style="margin-bottom:14px">
+  <label>Preço de 25 Tibia Coins em R$ (opcional)</label>
+  <div style="display:flex;gap:7px">
+   <input id="cfgBRL25" type="number" min="0" step="0.01" placeholder="Ex.: 53,50">
+   <button class="mini" style="flex:none" onclick="salvarCotacaoBRL()">Salvar</button>
+  </div>
+  <p style="margin:7px 0 0;font-size:11px">Confira o preço de hoje no
+   <a href="https://www.moedaz.com/tibia" target="_blank" rel="noopener" style="color:#8fd8ff">Moedaz</a> ou
+   <a href="https://www.reidoscoins.com.br/Tibia-Coins" target="_blank" rel="noopener" style="color:#8fd8ff">Rei dos Coins</a>
+   — eles vendem em blocos de 25 TC, então cole aqui o preço desse bloco (ex.: 25 TC por R$ 53,50).</p>
+ </div>
  <div class="rep">
   <button class="blue" onclick="fechar('mCfg');novaMeta()"><b>+ Criar nova meta</b><small>Você pode alternar entre várias metas</small></button>
   <button class="btn-gold" onclick="exportar()"><b>⇩ Exportar backup (.json)</b><small>Salva metas, farms e relatórios</small></button>
@@ -260,6 +278,18 @@ tr.total td:first-child{font-weight:700}
  <div class="field"><label>Valor em Gold</label><input id="addGold" type="number" min="1" placeholder="Ex.: 2000000"></div>
  <div class="actions"><button class="btn-green" onclick="confirmarAdd()">Registrar farm</button>
   <button onclick="fechar('mAdd')">Cancelar</button></div>
+</div></div>
+
+<div class="modal" id="mShare"><div class="box" style="width:min(640px,100%)">
+ <h3>Compartilhar progresso</h3><p>Uma imagem com o resumo da sua meta atual, pronta pra mandar no grupo.</p>
+ <div style="border:1px solid #1e4460;border-radius:10px;overflow:hidden;background:#04121f;line-height:0">
+  <canvas id="shareCanvas" width="1200" height="630" style="width:100%;height:auto;display:block"></canvas>
+ </div>
+ <div class="actions">
+  <button class="btn-green" onclick="compartilharCard()">📤 Compartilhar</button>
+  <button onclick="baixarCard()">⇩ Baixar imagem</button>
+  <button onclick="fechar('mShare')">Fechar</button>
+ </div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -339,7 +369,7 @@ async function buscarItens(termo){
 
 /* ================= estado + persistência ================= */
 const CK="tibiaFarm3_",CHUNK=3200;
-var S={metas:[],ativa:null,tcPrice:35000},aba="hist",abaRel="semanal",addDate=null,tSugg=null,menuAberto=false;
+var S={metas:[],ativa:null,tcPrice:35000,tcBRL:0},aba="hist",abaRel="semanal",addDate=null,tSugg=null,menuAberto=false;
 
 function serializar(){return btoa(unescape(encodeURIComponent(JSON.stringify(S))))}
 function salvar(){
@@ -367,6 +397,7 @@ function carregar(){
 const esc=v=>String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 const fmt=n=>Math.round(Number(n)||0).toLocaleString("pt-BR");
 const fmt2=n=>(Number(n)||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const brl=n=>(Number(n)||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 const hoje=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const brData=s=>s.split("-").reverse().join("/");
 const meta=()=>S.metas.find(m=>m.id===S.ativa)||null;
@@ -380,6 +411,10 @@ const tc=g=>gold(g)/S.tcPrice;
 const diasFarm=g=>[...new Set(g.sessoes.map(s=>s.data))].sort();
 const doDia=(g,d)=>g.sessoes.filter(s=>s.data===d&&!s.somado).sort((a,b)=>a.hora.localeCompare(b.hora));
 const goldDia=(g,d)=>doDia(g,d).reduce((a,s)=>a+Number(s.gold),0);
+function melhorDia(g){
+ let best=null;
+ diasFarm(g).forEach(d=>{const v=goldDia(g,d);if(!best||v>best.gold)best={data:d,gold:v}});
+ return best}
 const tcDia=(g,d)=>goldDia(g,d)/S.tcPrice;
 const diasDesde=g=>Math.floor((Date.now()-new Date(g.criada).getTime())/86400000);
 function janelaFarm(g){
@@ -440,7 +475,11 @@ function somarDia(d){
  const total=arr.reduce((a,s)=>a+Number(s.gold),0),t=arr.reduce((a,s)=>a+Number(s.gold)/Number(s.tcPrice),0);
  arr.forEach(s=>s.somado=true);
  g.sessoes.push({id:Date.now()+Math.random(),data:d,hora:arr[arr.length-1].hora,gold:total,tcPrice:total/t,juntado:arr.length});
- salvar();render();toast("Dia somado em um único registro.")}
+ salvar();render();toast("Dia somado em um único registro.");
+ if(d===hoje()){
+  const box=document.getElementById("todayBox");
+  if(box){box.classList.add("flash");setTimeout(()=>box.classList.remove("flash"),1300)}
+ }}
 
 function checar(g){
  while(true){
@@ -478,7 +517,12 @@ function importar(el){
   toast("Backup importado.")}catch(e){toast("Arquivo inválido.")}};
  r.readAsText(f);el.value=""}
 
-function abrirConfig(){abrir("mCfg")}
+function abrirConfig(){
+ document.getElementById("cfgBRL25").value=S.tcBRL>0?Math.round(S.tcBRL*25*100)/100:"";
+ abrir("mCfg")}
+function salvarCotacaoBRL(){
+ const v=Number(document.getElementById("cfgBRL25").value);
+ S.tcBRL=v>0?v/25:0;salvar();render();toast(S.tcBRL>0?"Cotação salva.":"Cotação em R$ removida.")}
 function setAba(a){aba=a;render()}
 function setAbaRel(a){abaRel=a;render()}
 
@@ -507,6 +551,118 @@ function previewItem(nome){
   '<div>Ícone de <b>'+esc(nome)+'</b> carregado da Tibia Wiki.</div>'}
 
 /* ================= render ================= */
+/* ================= compartilhar progresso (canvas) ================= */
+function roundRect(ctx,x,y,w,h,r){
+ ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+ ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function carregarImagemCORS(url){
+ return new Promise((res,rej)=>{
+  const img=new Image();img.crossOrigin="anonymous";
+  const t=setTimeout(()=>rej(new Error("timeout")),4000);
+  img.onload=()=>{clearTimeout(t);res(img)};
+  img.onerror=()=>{clearTimeout(t);rej(new Error("erro ao carregar"))};
+  img.src=url})}
+async function desenharCard(canvas,g,tentarIcone){
+ const ctx=canvas.getContext("2d"),W=canvas.width,H=canvas.height;
+ ctx.clearRect(0,0,W,H);
+ const grad=ctx.createLinearGradient(0,0,W,H);
+ grad.addColorStop(0,"#0d2c46");grad.addColorStop(.55,"#071627");grad.addColorStop(1,"#020810");
+ ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+ const rg=ctx.createRadialGradient(W*.5,H*.08,10,W*.5,H*.08,W*.62);
+ rg.addColorStop(0,"rgba(76,194,241,.20)");rg.addColorStop(1,"rgba(76,194,241,0)");
+ ctx.fillStyle=rg;ctx.fillRect(0,0,W,H);
+ ctx.strokeStyle="rgba(76,194,241,.4)";ctx.lineWidth=3;
+ roundRect(ctx,11,11,W-22,H-22,22);ctx.stroke();
+
+ ctx.textAlign="center";
+ ctx.fillStyle="#7fd6ff";ctx.font="700 21px Arial";
+ ctx.fillText("T I B I A   F A R M   T R A C K E R",W/2,56);
+
+ const tg=ctx.createLinearGradient(0,78,0,138);
+ tg.addColorStop(0,"#fff3c4");tg.addColorStop(1,"#e6a92f");
+ ctx.fillStyle=tg;ctx.font="700 50px Georgia";
+ ctx.fillText(g.nome.toUpperCase(),W/2,138);
+
+ let iconDrawn=false;
+ if(tentarIcone&&g.img){
+  try{
+   const img=await carregarImagemCORS(g.img),s=88,cy=200;
+   ctx.save();ctx.beginPath();ctx.arc(W/2,cy,s/2+11,0,Math.PI*2);
+   ctx.fillStyle="#05121f";ctx.fill();ctx.strokeStyle="#2a5a7d";ctx.lineWidth=2;ctx.stroke();
+   ctx.clip();ctx.drawImage(img,W/2-s/2,cy-s/2,s,s);ctx.restore();
+   iconDrawn=true;
+  }catch(e){}
+ }
+
+ const tot=gold(g),falta=Math.max(0,g.metaGold-tot),pct=Math.min(100,g.metaGold?tot/g.metaGold*100:0);
+ const barY=iconDrawn?272:224,barX=150,barW=W-300,barH=28;
+ ctx.fillStyle="#02070d";roundRect(ctx,barX,barY,barW,barH,14);ctx.fill();
+ ctx.strokeStyle="#2b5170";ctx.lineWidth=1.5;roundRect(ctx,barX,barY,barW,barH,14);ctx.stroke();
+ const fillW=Math.max(0,(barW-4)*pct/100);
+ if(fillW>0){
+  const bg2=ctx.createLinearGradient(barX,0,barX+barW,0);
+  bg2.addColorStop(0,"#16a86e");bg2.addColorStop(1,"#5df0a8");
+  ctx.fillStyle=bg2;roundRect(ctx,barX+2,barY+2,fillW,barH-4,12);ctx.fill();
+ }
+ ctx.fillStyle="#e9f6ff";ctx.font="700 22px Arial";ctx.textAlign="left";
+ ctx.fillText(Math.round(pct)+"%",barX+barW+16,barY+barH-6);
+
+ const statY=barY+68,falBRL=S.tcBRL>0?falta/S.tcPrice*S.tcBRL:0;
+ const cols=[["ACUMULADO",fmt(tot)+" GP"],["FALTA",fmt(falta)+" GP"],["META",fmt(g.metaGold)+" GP"]];
+ const colW=(W-200)/3;
+ ctx.textAlign="center";
+ cols.forEach((c,i)=>{
+  const x=100+colW*i+colW/2;
+  ctx.fillStyle="#8aa5bb";ctx.font="600 15px Arial";ctx.fillText(c[0],x,statY);
+  ctx.fillStyle="#ffd978";ctx.font="700 25px Arial";ctx.fillText(c[1],x,statY+32);
+ });
+
+ let footY=statY+76;
+ const rec=melhorDia(g);
+ ctx.font="500 18px Arial";
+ if(rec){ctx.fillStyle="#bfe6ff";ctx.fillText("🏆 Melhor dia: "+fmt(rec.gold)+" GP em "+brData(rec.data),W/2,footY);footY+=32}
+ const diasComFarm=diasFarm(g).length,mediaDia=diasComFarm>0?tot/diasComFarm:0,
+  freqSemana=diasComFarm>0?Math.round(diasComFarm/janelaFarm(g)*7*10)/10:0,
+  farmNec=mediaDia>0?Math.ceil(falta/mediaDia):null,
+  diasRest=g.concluida?0:(farmNec!=null&&freqSemana>0?Math.ceil(farmNec/(freqSemana/7)):null);
+ if(g.concluida){ctx.fillStyle="#7fe6b8";ctx.fillText("✓ Meta concluída!",W/2,footY)}
+ else if(diasRest!=null){ctx.fillStyle="#bfe6ff";ctx.fillText("⏳ Faltam ~"+diasRest+(diasRest===1?" dia":" dias")+" no ritmo atual",W/2,footY)}
+ if(S.tcBRL>0&&falta>0){footY+=28;ctx.fillStyle="#8fd8ff";ctx.font="500 16px Arial";
+  ctx.fillText("≈ "+brl(falBRL)+" restantes",W/2,footY)}
+
+ ctx.fillStyle="#5c7690";ctx.font="13px Arial";
+ ctx.fillText("Gerado em "+new Date().toLocaleDateString("pt-BR"),W/2,H-22);
+}
+async function abrirCompartilhar(){
+ const g=meta();if(!g)return toast("Crie uma meta primeiro.");
+ abrir("mShare");
+ const canvas=document.getElementById("shareCanvas");
+ await desenharCard(canvas,g,true);
+}
+async function exportarCardBlob(){
+ const canvas=document.getElementById("shareCanvas"),g=meta();if(!g)return null;
+ let blob=await new Promise(res=>{try{canvas.toBlob(b=>res(b),"image/png")}catch(e){res(null)}});
+ if(!blob){await desenharCard(canvas,g,false);
+  blob=await new Promise(res=>{try{canvas.toBlob(b=>res(b),"image/png")}catch(e){res(null)}})}
+ return blob}
+async function baixarCard(){
+ const blob=await exportarCardBlob();
+ if(!blob)return toast("Não foi possível gerar a imagem.");
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="tibia-farm-tracker.png";a.click();
+ setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast("Imagem baixada.")}
+async function compartilharCard(){
+ const blob=await exportarCardBlob();
+ if(!blob)return toast("Não foi possível gerar a imagem.");
+ const file=new File([blob],"tibia-farm-tracker.png",{type:"image/png"});
+ if(navigator.canShare&&navigator.canShare({files:[file]})){
+  try{await navigator.share({files:[file],title:"Tibia Farm Tracker",text:"Meu progresso na meta!"})}
+  catch(e){/* usuário cancelou */}
+ }else{
+  const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download="tibia-farm-tracker.png";a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast("Seu navegador não suporta compartilhar direto — imagem baixada, é só anexar.");
+ }}
+
 function ringSVG(p){
  const r=22,c=2*Math.PI*r;
  return '<svg width="54" height="54" viewBox="0 0 54 54"><circle cx="27" cy="27" r="'+r+'" fill="none" stroke="#123049" stroke-width="6"/>'+
@@ -531,7 +687,9 @@ function tabelaHist(g){
     '<button class="mini icon red" onclick="excluirFarm(\''+s.id+'\')" title="Excluir" aria-label="Excluir">🗑</button></div></td></tr>'});
   html+='<tr class="total"><td>Total do Dia</td><td><div class="cell"><span class="coin">G</span>'+fmt(goldDia(g,d))+
    '</div></td><td><div class="cell"><span class="coin tc">TC</span>'+fmt2(tcDia(g,d))+'</div></td><td></td>'+
-   '<td><div class="rowbtns"><button class="mini btn-green" onclick="somarDia(\''+d+'\')">Σ Somar do Dia</button></div></td></tr>'});
+   '<td><div class="rowbtns">'+(d===hoje()
+    ?'<button class="mini btn-green" onclick="somarDia(\''+d+'\')">Σ Somar do Dia</button>'
+    :'<span class="muted" style="font-size:11px">dia encerrado</span>')+'</div></td></tr>'});
  return html+'</tbody></table></div>'}
 
 function tabelaRel(g,tipo){
@@ -572,7 +730,8 @@ function render(){
   freqSemana=diasComFarm>0?Math.round(diasComFarm/diasCorridos*7*10)/10:0,
   farmDiasNecessarios=mediaDia>0?Math.ceil(falta/mediaDia):null,
   diasRestantes=g.concluida?0:(farmDiasNecessarios!=null&&freqSemana>0?Math.ceil(farmDiasNecessarios/(freqSemana/7)):null),
-  dataPrevista=(diasRestantes!=null&&!g.concluida)?new Date(Date.now()+diasRestantes*86400000).toLocaleDateString("pt-BR"):null;
+  dataPrevista=(diasRestantes!=null&&!g.concluida)?new Date(Date.now()+diasRestantes*86400000).toLocaleDateString("pt-BR"):null,
+  recorde=melhorDia(g);
 
  app.innerHTML=`
  <div class="main">
@@ -590,20 +749,23 @@ function render(){
     <div class="stats">
      <div><small>Acumulado</small>
       <div class="val goldtxt"><span class="coin">G</span>${fmt(tot)} <small>GP</small></div>
-      <div class="val tc"><span class="coin tc">TC</span>${fmt2(ttc)} <small>TC</small></div></div>
+      <div class="val tc"><span class="coin tc">TC</span>${fmt2(ttc)} <small>TC</small></div>
+      ${S.tcBRL>0?'<div class="muted" style="font-size:11px;margin-top:2px">≈ '+brl(ttc*S.tcBRL)+'</div>':''}</div>
      <div><small>Falta</small>
       <div class="val goldtxt"><span class="coin">G</span>${fmt(falta)} <small>GP</small></div>
-      <div class="val tc"><span class="coin tc">TC</span>${fmt2(faltaTc)} <small>TC</small></div></div>
+      <div class="val tc"><span class="coin tc">TC</span>${fmt2(faltaTc)} <small>TC</small></div>
+      ${S.tcBRL>0?'<div class="muted" style="font-size:11px;margin-top:2px">≈ '+brl(faltaTc*S.tcBRL)+'</div>':''}</div>
      <div><small>Total da Meta</small>
       <div class="val goldtxt"><span class="coin">G</span>${fmt(g.metaGold)} <small>GP</small></div>
-      <div class="val tc"><span class="coin tc">TC</span>${fmt2(metaTc)} <small>TC</small></div></div>
+      <div class="val tc"><span class="coin tc">TC</span>${fmt2(metaTc)} <small>TC</small></div>
+      ${S.tcBRL>0?'<div class="muted" style="font-size:11px;margin-top:2px">≈ '+brl(metaTc*S.tcBRL)+'</div>':''}</div>
     </div>
     ${g.concluida?'<div class="empty greentxt" style="padding:12px 0 0">✓ Meta atingida em '+new Date(g.concluida).toLocaleDateString("pt-BR")+'</div>':''}
    </section>
 
    <section class="card">
     <h2>⚔ Farm do Dia <small>(atual)</small></h2>
-    <div class="today">
+    <div class="today" id="todayBox">
      <div class="val goldtxt"><span class="coin">G</span>${fmt(goldDia(g,d))} <small>GP</small></div>
      <div class="val tc"><span class="coin tc">TC</span>${fmt2(tcDia(g,d))} <small>TC</small></div>
     </div>
@@ -631,7 +793,11 @@ function render(){
      <div class="line"><span class="coin">G</span><div><small>Gold Total</small><b class="goldtxt">${fmt(tot)} GP</b></div></div>
      <div class="line"><span class="coin tc">TC</span><div><small>Tibia Coin Total</small><b class="cyantxt">${fmt2(ttc)} TC</b></div></div>
      <div class="line"><span class="coin">G</span><div><small>Falta para a Meta</small><b class="goldtxt">${fmt(falta)} GP</b>
-      <b class="cyantxt" style="font-size:12.5px">${fmt2(faltaTc)} TC</b></div></div>
+      <b class="cyantxt" style="font-size:12.5px">${fmt2(faltaTc)} TC</b>
+      ${S.tcBRL>0?'<div class="muted" style="font-size:10.5px;margin-top:2px">≈ '+brl(faltaTc*S.tcBRL)+'</div>':''}</div></div>
+     <div class="line"><span class="coin record">🏆</span><div><small>Melhor Dia</small>
+      ${recorde?'<b class="goldtxt">'+fmt(recorde.gold)+' GP</b><div class="muted" style="font-size:10.5px;margin-top:2px">em '+brData(recorde.data)+'</div>':'<b class="goldtxt">—</b>'}
+     </div></div>
      <div class="line"><span class="coin days">⏳</span><div><small>Estimativa para a Meta</small>
       <b class="goldtxt">${g.concluida?"Meta concluída":diasRestantes==null?"Sem farm ainda":diasRestantes===0?"Hoje!":diasRestantes+(diasRestantes===1?" dia":" dias")}</b>
       ${(!g.concluida&&diasRestantes!=null)?'<b class="cyantxt" style="font-size:12px">até '+dataPrevista+'</b>':''}
@@ -644,6 +810,7 @@ function render(){
    <section class="card">
     <h2>🗂 Relatórios</h2>
     <div class="rep">
+     <button class="blue" onclick="abrirCompartilhar()"><b>📤 Compartilhar Progresso</b><small>Gera uma imagem para enviar no grupo ou guild</small></button>
      <button class="blue" onclick="relSemanal()"><b>Gerar Relatório Semanal</b><small>Disponível com 3+ dias registrados</small></button>
      <button class="purple" onclick="relMensal()"><b>Gerar Relatório Mensal</b><small>Será gerado automaticamente em 30 dias</small></button>
      <button class="red" onclick="limpar()"><b>Limpar Dados</b><small>Resetar todos os dados</small></button>

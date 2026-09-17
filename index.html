@@ -1032,7 +1032,7 @@ const provider = new GoogleAuthProvider();
 
 function refDoUsuario(uid){ return doc(db, "farmTrackers", uid); }
 
-async function pushCloud(){
+async async function pushCloud(){
  const u = window.currentUser;
  if(!u || !window.S) return;
  try{ await setDoc(refDoUsuario(u.uid), JSON.parse(JSON.stringify(window.S))); }

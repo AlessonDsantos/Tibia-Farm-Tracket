@@ -266,6 +266,17 @@ tr.total td:first-child{font-weight:700}
  </div>
 </div>
 
+<div class="modal" id="mSetupAlert"><div class="box" style="width:min(500px,100%);text-align:center">
+ <div style="font-size:42px;margin-bottom:8px">⚙️</div>
+ <h3>Configure seu perfil</h3>
+ <p style="line-height:1.6">Sua meta foi criada com sucesso! Para aproveitar todos os recursos do Tibia Farm Tracker, vá em <b>Configurações</b> e defina seu <b>Nickname</b> e o <b>preço de 25 Tibia Coins em R$</b>.</p>
+ <p style="color:var(--muted);font-size:12px;margin-top:-2px">O nickname identifica você no ranking público e o preço em reais permite acompanhar o valor da sua meta em dinheiro.</p>
+ <div class="actions" style="justify-content:center">
+  <button class="btn-green" onclick="irParaConfiguracoes()">⚙️ Ir para Configurações</button>
+  <button onclick="fechar('mSetupAlert')">Agora não</button>
+ </div>
+</div></div>
+
 <div class="modal" id="mGoal"><div class="box">
  <h3>Nova meta</h3><p>O ícone do item é buscado na Tibia Wiki.</p>
  <div class="field"><label>Nome do item</label>
@@ -517,10 +528,26 @@ function criarMeta(){
  if(!n)return toast("Informe o nome do item.");
  if(!(g>0))return toast("Informe a meta em gold.");
  if(!(p>0))return toast("Informe o preço da Tibia Coin.");
+ // O nickname aleatório é criado somente quando a primeira meta é criada.
+ if(!String(S.nickname||"").trim()) S.nickname=gerarNicknameAleatorio();
  S.tcPrice=p;
  S.metas.push({id:Date.now(),nome:n,img:gifDoItem(n),metaGold:g,criada:new Date().toISOString(),
   sessoes:[],semanais:[],mensais:[],cursor:0,concluida:null});
- S.ativa=S.metas[S.metas.length-1].id;salvar();fechar("mGoal");render();toast("Meta criada.")}
+ S.ativa=S.metas[S.metas.length-1].id;salvar();fechar("mGoal");render();toast("Meta criada.");
+ abrirAvisoConfiguracoes()}
+function abrirAvisoConfiguracoes(){
+ const m=document.getElementById("mSetupAlert");
+ if(m)m.classList.add("open");
+}
+function irParaConfiguracoes(){
+ const m=document.getElementById("mSetupAlert");
+ if(m)m.classList.remove("open");
+ abrirConfig();
+ setTimeout(()=>{
+  const el=document.getElementById("cfgNickname");
+  if(el)el.focus();
+ },80);
+}
 function excluirMeta(){
  const g=meta();if(!g)return toast("Nenhuma meta ativa.");
  if(!confirm('Excluir a meta "'+g.nome+'" e todo o histórico dela?'))return;
@@ -1137,21 +1164,17 @@ async function syncRanking(){
   const stats=window.calcularRankingStats();
   const rankRef=doc(db,"rankings",u.uid);
 
-  // O nickname é obrigatório. Se por algum motivo uma conta antiga
-  // estiver sem nickname, cria um automaticamente e mantém o usuário
-  // apto a aparecer no ranking.
-  if(!String(stats.nickname||"").trim()){
-   window.S.nickname=gerarNicknameAleatorio();
-   window.salvarLocal&&window.salvarLocal();
-  }
+  // O nickname aleatório NÃO é criado aqui. Ele só é criado no momento
+  // em que o usuário cria uma meta. Assim, após "Limpar dados", uma conta
+  // sem metas não volta automaticamente para o ranking.
+  if(!String(stats.nickname||"").trim()) return true;
 
-  const updated=window.calcularRankingStats();
   await setDoc(rankRef,{
-   nickname:updated.nickname,
-   profit:updated.profit,
-   melhorHunt:updated.melhorHunt,
-   melhorHuntNome:updated.melhorHuntNome,
-   streak:updated.streak,
+   nickname:stats.nickname,
+   profit:stats.profit,
+   melhorHunt:stats.melhorHunt,
+   melhorHuntNome:stats.melhorHuntNome,
+   streak:stats.streak,
    updatedAt:new Date()
   });
   return true;
@@ -1183,19 +1206,14 @@ async function pullCloud(uid){
   const snap=await getDoc(refDoUsuario(uid));
   if(snap.exists() && snap.data() && snap.data().metas){
    window.S=snap.data();
-
-   // Garante a regra de nickname obrigatório também para contas
-   // antigas que possam ter ficado sem esse campo.
-   if(!String(window.S.nickname||"").trim()){
-    window.S.nickname=gerarNicknameAleatorio();
-   }
+   if(typeof window.S.nickname!=="string") window.S.nickname="";
    window.salvarLocal&&window.salvarLocal();
    await pushCloud();
   }else{
-   if(window.S && !String(window.S.nickname||"").trim()){
-    window.S.nickname=gerarNicknameAleatorio();
-   }
-   await pushCloud();
+   // Conta sem dados/metas: não cria nickname, não cria ranking e não
+   // recria dados automaticamente depois de "Limpar dados".
+   if(window.S && !Array.isArray(window.S.metas)) window.S={metas:[],ativa:null,tcPrice:35000,tcBRL:0,nickname:""};
+   if(window.salvarLocal)window.salvarLocal();
   }
  }catch(e){
   console.error("Falha ao carregar da nuvem:",e);

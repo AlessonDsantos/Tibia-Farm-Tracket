@@ -1130,6 +1130,10 @@ async function pushCloud(){
  }catch(e){ console.error("Falha ao salvar na nuvem:", e); }
 }
 
+function gerarNicknameAleatorio(){
+ return "Jogador"+Math.floor(1000+Math.random()*9000);
+}
+
 async function pullCloud(uid){
  try{
   const snap = await getDoc(refDoUsuario(uid));
@@ -1137,6 +1141,9 @@ async function pullCloud(uid){
    window.S = snap.data();
    window.salvarLocal && window.salvarLocal();
   }else{
+   if(window.S && !String(window.S.nickname||"").trim()){
+    window.S.nickname = gerarNicknameAleatorio();
+   }
    await pushCloud();
   }
  }catch(e){

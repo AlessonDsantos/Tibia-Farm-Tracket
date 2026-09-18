@@ -619,12 +619,16 @@ function relSemanal(){
 function relMensal(){
  const g=meta();if(!g.sessoes.length)return toast("Ainda não há farm registrado.");
  gerarMensal(g,false);abaRel="mensal";salvar();render();toast("Relatório mensal gerado.")}
-function limpar(){
- if(!confirm("Isso apaga TODOS os dados do Tibia Farm Tracker, inclusive o desempenho e a meta semanal. Continuar?"))return;
+function resetarDadosLocais(){
  S={metas:[],ativa:null,tcPrice:35000,tcBRL:0,nickname:""};
  try{localStorage.removeItem(CK+"data");localStorage.removeItem("tft_weekly_goal");}catch(e){}
  try{for(let i=0;i<40;i++)document.cookie=CK+i+"=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";document.cookie=CK+"n=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";}catch(e){}
  if(window.TibiaFarmRetention){window.TibiaFarmRetention.clearDate();window.TibiaFarmRetention.refresh();}
+}
+window.resetarDadosLocais=resetarDadosLocais;
+function limpar(){
+ if(!confirm("Isso apaga TODOS os dados do Tibia Farm Tracker, inclusive o desempenho e a meta semanal. Continuar?"))return;
+ resetarDadosLocais();
  render();toast("Todos os dados foram apagados.")
 }
 function rankingStreakFromDates(dates){
@@ -1189,7 +1193,11 @@ window.cloudPush = pushCloud;
 onAuthStateChanged(auth, async (user)=>{
  window.currentUser = user;
  if(user){ await pullCloud(user.uid); }
- else{ window.updateAuthUI && window.updateAuthUI(); }
+ else{
+  if(window.resetarDadosLocais)window.resetarDadosLocais();
+  window.render && window.render();
+  window.updateAuthUI && window.updateAuthUI();
+ }
 });
 </script>
 

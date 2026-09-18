@@ -626,10 +626,22 @@ function resetarDadosLocais(){
  if(window.TibiaFarmRetention){window.TibiaFarmRetention.clearDate();window.TibiaFarmRetention.refresh();}
 }
 window.resetarDadosLocais=resetarDadosLocais;
-function limpar(){
- if(!confirm("Isso apaga TODOS os dados do Tibia Farm Tracker, inclusive o desempenho e a meta semanal. Continuar?"))return;
+async function limpar(){
+ if(!confirm("Isso apaga TODOS os dados do Tibia Farm Tracker, inclusive o desempenho, a meta semanal e o ranking público. Continuar?"))return;
  resetarDadosLocais();
- render();toast("Todos os dados foram apagados.")
+ render();
+
+ // Se estiver conectado ao Google, apaga também os dados da nuvem e
+ // especificamente o documento público do ranking. O ranking NÃO é
+ // apagado ao apenas alterar o nickname ou fazer login.
+ if(window.limparDadosNuvem){
+  const ok=await window.limparDadosNuvem();
+  if(!ok){
+   toast("Dados locais apagados, mas houve erro ao limpar a nuvem.");
+   return;
+  }
+ }
+ toast("Todos os dados foram apagados.");
 }
 function rankingStreakFromDates(dates){
   const set=new Set(dates);
@@ -714,7 +726,13 @@ function abrirConfig(){
  abrir("mCfg")}
 function salvarNickname(){
  const v=(document.getElementById("cfgNickname").value||"").trim();
- S.nickname=v;salvar();toast(v?"Nickname salvo.":"Nickname removido do ranking.");
+ if(!v){
+  document.getElementById("cfgNickname").focus();
+  return toast("O nickname é obrigatório.");
+ }
+ S.nickname=v;
+ salvar();
+ toast("Nickname salvo.");
 }
 function salvarCotacaoBRL(){
  const v=Number(document.getElementById("cfgBRL25").value);
@@ -1093,7 +1111,7 @@ window.updateAuthUI();
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
  from "https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs }
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, orderBy, limit, getDocs }
  from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -1112,26 +1130,48 @@ const provider = new GoogleAuthProvider();
 
 function refDoUsuario(uid){ return doc(db, "farmTrackers", uid); }
 
-async function pushCloud(){
- const u = window.currentUser;
- if(!u || !window.S) return;
+async function syncRanking(){
+ const u=window.currentUser;
+ if(!u || !window.S || !window.calcularRankingStats)return true;
  try{
-  await setDoc(refDoUsuario(u.uid), JSON.parse(JSON.stringify(window.S)));
+  const stats=window.calcularRankingStats();
+  const rankRef=doc(db,"rankings",u.uid);
 
-  // Publica somente as estatísticas necessárias para o ranking.
-  const stats = window.calcularRankingStats ? window.calcularRankingStats() : null;
-  const rankRef = doc(db, "rankings", u.uid);
-  if(stats && stats.nickname){
-   await setDoc(rankRef, {
-    nickname: stats.nickname,
-    profit: stats.profit,
-    melhorHunt: stats.melhorHunt,
-    melhorHuntNome: stats.melhorHuntNome,
-    streak: stats.streak,
-    updatedAt: new Date()
-   });
+  // O nickname é obrigatório. Se por algum motivo uma conta antiga
+  // estiver sem nickname, cria um automaticamente e mantém o usuário
+  // apto a aparecer no ranking.
+  if(!String(stats.nickname||"").trim()){
+   window.S.nickname=gerarNicknameAleatorio();
+   window.salvarLocal&&window.salvarLocal();
   }
- }catch(e){ console.error("Falha ao salvar na nuvem:", e); }
+
+  const updated=window.calcularRankingStats();
+  await setDoc(rankRef,{
+   nickname:updated.nickname,
+   profit:updated.profit,
+   melhorHunt:updated.melhorHunt,
+   melhorHuntNome:updated.melhorHuntNome,
+   streak:updated.streak,
+   updatedAt:new Date()
+  });
+  return true;
+ }catch(e){
+  console.error("Falha ao sincronizar ranking:",e);
+  return false;
+ }
+}
+
+async function pushCloud(){
+ const u=window.currentUser;
+ if(!u || !window.S)return false;
+ try{
+  await setDoc(refDoUsuario(u.uid),JSON.parse(JSON.stringify(window.S)));
+  await syncRanking();
+  return true;
+ }catch(e){
+  console.error("Falha ao salvar na nuvem:",e);
+  return false;
+ }
 }
 
 function gerarNicknameAleatorio(){
@@ -1140,26 +1180,54 @@ function gerarNicknameAleatorio(){
 
 async function pullCloud(uid){
  try{
-  const snap = await getDoc(refDoUsuario(uid));
+  const snap=await getDoc(refDoUsuario(uid));
   if(snap.exists() && snap.data() && snap.data().metas){
-   window.S = snap.data();
-   window.salvarLocal && window.salvarLocal();
+   window.S=snap.data();
+
+   // Garante a regra de nickname obrigatório também para contas
+   // antigas que possam ter ficado sem esse campo.
+   if(!String(window.S.nickname||"").trim()){
+    window.S.nickname=gerarNicknameAleatorio();
+   }
+   window.salvarLocal&&window.salvarLocal();
+   await pushCloud();
   }else{
    if(window.S && !String(window.S.nickname||"").trim()){
-    window.S.nickname = gerarNicknameAleatorio();
+    window.S.nickname=gerarNicknameAleatorio();
    }
    await pushCloud();
   }
  }catch(e){
-  console.error("Falha ao carregar da nuvem:", e);
+  console.error("Falha ao carregar da nuvem:",e);
   alert("Não foi possível carregar seus dados da nuvem agora. Seus dados locais continuam intactos.");
  }
- window.render && window.render();
- window.updateAuthUI && window.updateAuthUI();
+ window.render&&window.render();
+ window.updateAuthUI&&window.updateAuthUI();
 }
+
+// Limpa os dados persistidos somente quando o usuário usa o botão
+// "Limpar dados". Alterar nickname, salvar farm ou entrar novamente
+// NÃO remove o documento do ranking.
+window.limparDadosNuvem=async function(){
+ const u=window.currentUser;
+ if(!u)return true;
+ try{
+  await Promise.all([
+   deleteDoc(refDoUsuario(u.uid)),
+   deleteDoc(doc(db,"rankings",u.uid))
+  ]);
+  return true;
+ }catch(e){
+  console.error("Falha ao limpar dados da nuvem:",e);
+  return false;
+ }
+};
+
+window.syncRanking=syncRanking;
 
 window.carregarRanking = async function(){
  try{
+  if(window.currentUser)await syncRanking();
   const base=collection(db,"rankings");
   const [a,b,c]=await Promise.all([
    getDocs(query(base,orderBy("profit","desc"),limit(10))),

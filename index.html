@@ -529,7 +529,7 @@ function criarMeta(){
  if(!(g>0))return toast("Informe a meta em gold.");
  if(!(p>0))return toast("Informe o preço da Tibia Coin.");
  // O nickname aleatório é criado somente quando a primeira meta é criada.
- if(!String(S.nickname||"").trim()) S.nickname=gerarNicknameAleatorio();
+ if(!String(S.nickname||"").trim()) S.nickname=(window.gerarNicknameAleatorio?window.gerarNicknameAleatorio():"Jogador"+Math.floor(1000+Math.random()*9000));
  S.tcPrice=p;
  S.metas.push({id:Date.now(),nome:n,img:gifDoItem(n),metaGold:g,criada:new Date().toISOString(),
   sessoes:[],semanais:[],mensais:[],cursor:0,concluida:null});
@@ -1200,6 +1200,7 @@ async function pushCloud(){
 function gerarNicknameAleatorio(){
  return "Jogador"+Math.floor(1000+Math.random()*9000);
 }
+window.gerarNicknameAleatorio=gerarNicknameAleatorio;
 
 async function pullCloud(uid){
  try{

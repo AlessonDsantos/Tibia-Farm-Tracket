@@ -176,6 +176,7 @@ tr.total td:first-child{font-weight:700}
 .box{background:linear-gradient(180deg,#092034,#04101d)}
 .box h3{margin:0 0 4px;font-size:17px;color:#f2e1b0}
 .box p{margin:0 0 14px;color:var(--muted);font-size:12px}
+.logout-choice-box{width:min(560px,100%)}.logout-choice{display:grid;gap:10px;margin:14px 0 6px}.logout-option{width:100%;display:flex;align-items:flex-start;gap:12px;text-align:left;padding:14px;border:1px solid #2c6188;border-radius:12px;background:rgba(5,22,36,.72);color:#fff;cursor:pointer;transition:.18s ease}.logout-option:hover{transform:translateY(-1px);border-color:#4d91bd;background:rgba(9,35,54,.9)}.logout-option.clear{border-color:#704047}.logout-option.clear:hover{border-color:#a45b63;background:rgba(58,20,25,.5)}.logout-option-icon{font-size:22px;line-height:1.1}.logout-option strong{display:block;color:#f2e1b0;font-size:13px;margin-bottom:4px}.logout-option small{display:block;color:var(--muted);font-size:11px;line-height:1.45}.modal-actions{display:flex;justify-content:flex-end;margin-top:12px}
 .sugg{position:relative}
 .sugg-list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:10;background:#06182a;border:1px solid #2a5471;
  border-radius:8px;max-height:190px;overflow:auto;display:none}
@@ -269,6 +270,14 @@ tr.total td:first-child{font-weight:700}
    <button onclick="abrirRanking()">🏆 Ranking</button><button onclick="abrirConfig()">⚙ Configurações</button>
    <button id="btnAuth" class="btn-account" onclick="onAuthBtn()">👤 Entrar com Google</button>
   </div>
+
+  <div class="modal" id="mLogoutChoice" aria-hidden="true"><div class="box logout-choice-box">
+   <h3>🚪 Sair da conta</h3><p>Seus dados podem ficar salvos neste navegador. Escolha o que fazer ao sair desta conta.</p>
+   <div class="logout-choice">
+    <button type="button" class="logout-option keep" onclick="logoutEscolhaManter()"><span class="logout-option-icon">💾</span><span><strong>Manter dados no navegador</strong><small>Os dados ficam vinculados a esta conta neste dispositivo e não serão entregues a outra conta Google.</small></span></button>
+    <button type="button" class="logout-option clear" onclick="logoutEscolhaLimpar()"><span class="logout-option-icon">🗑️</span><span><strong>Limpar dados do navegador</strong><small>Apaga os dados locais desta conta e também os dados salvos na nuvem, incluindo o ranking.</small></span></button>
+   </div><div class="modal-actions"><button type="button" class="secondary-btn" onclick="fecharLogoutModal()">Cancelar</button></div>
+  </div></div>
 
   <div id="app"></div>
 
@@ -517,16 +526,20 @@ const BOSSES_ROTACOES=[
 var S={metas:[],ativa:null,tcPrice:35000,tcBRL:0,nickname:"",huntsPersonalizadas:[],huntsFavoritas:[],bossesPersonalizados:[],bossesFavoritos:[],rotacoesPersonalizadas:[]},aba="hist",abaRel="semanal",abaHist="dia",histDateIni="",histDateFim="",addDate=null,editId=null,tSugg=null,menuAberto=false,huntPickerAlvo="add",huntPickerTipo="hunt",huntPickerBusca="",huntPickerFiltro="todas",metaModoInfinito=false;
 var tipoSel={farm:"hunt",add:"hunt",edit:"hunt"};
 
+const TFT_DEFAULT_STATE=()=>({metas:[],ativa:null,tcPrice:35000,tcBRL:0,nickname:"",huntsPersonalizadas:[],huntsFavoritas:[],bossesPersonalizados:[],bossesFavoritos:[],rotacoesPersonalizadas:[]});
+function accountDataKey(uid){return "tft_account_"+String(uid||"").replace(/[^a-zA-Z0-9_-]/g,"_")+"_data";}
+function accountGoalKey(uid){return "tft_account_"+String(uid||"").replace(/[^a-zA-Z0-9_-]/g,"_")+"_weekly_goal";}
+function meaningfulState(st){return !!(st&&Array.isArray(st.metas)&&(st.metas.length||st.nickname||st.ativa));}
+function saveAccountLocal(uid){if(!uid)return false;try{localStorage.setItem(accountDataKey(uid),serializar())}catch(e){}try{const g=localStorage.getItem("tft_weekly_goal");if(g!=null)localStorage.setItem(accountGoalKey(uid),g);else localStorage.removeItem(accountGoalKey(uid))}catch(e){}return true;}
+function loadAccountLocal(uid){if(!uid)return null;try{const raw=localStorage.getItem(accountDataKey(uid));if(raw){const o=JSON.parse(decodeURIComponent(escape(atob(raw))));if(o&&o.metas)return o;}}catch(e){}return null;}
+function loadAccountGoal(uid){try{return uid?localStorage.getItem(accountGoalKey(uid)):null}catch(e){return null}}
+function clearAnonymousLocal(){try{localStorage.removeItem(CK+"data");localStorage.removeItem("tft_weekly_goal")}catch(e){}try{for(let i=0;i<40;i++)document.cookie=CK+i+"=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";document.cookie=CK+"n=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/"}catch(e){}}
 function serializar(){return btoa(unescape(encodeURIComponent(JSON.stringify(S))))}
 function salvar(){
  const b=serializar();
- try{localStorage.setItem(CK+"data",b)}catch(e){}
- try{
-  for(let i=0;i<40;i++)document.cookie=CK+i+"=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-  const p=[];for(let i=0;i<b.length;i+=CHUNK)p.push(b.slice(i,i+CHUNK));
-  p.forEach((c,i)=>document.cookie=CK+i+"="+c+";max-age=315360000;path=/;SameSite=Lax");
-  document.cookie=CK+"n="+p.length+";max-age=315360000;path=/;SameSite=Lax";
- }catch(e){}
+ if(window.currentUser){saveAccountLocal(window.currentUser.uid)}else{
+  try{localStorage.setItem(CK+"data",b)}catch(e){}
+  try{for(let i=0;i<40;i++)document.cookie=CK+i+"=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";const p=[];for(let i=0;i<b.length;i+=CHUNK)p.push(b.slice(i,i+CHUNK));p.forEach((c,i)=>document.cookie=CK+i+"="+c+";max-age=315360000;path=/;SameSite=Lax");document.cookie=CK+"n="+p.length+";max-age=315360000;path=/;SameSite=Lax"}catch(e){}}
  if(window.cloudPush)window.cloudPush();
 }
 function carregar(){
@@ -927,7 +940,7 @@ function relMensal(){
  const g=meta();if(!g.sessoes.length)return toast("Ainda não há farm registrado.");
  gerarMensal(g,false);abaRel="mensal";salvar();render();toast("Relatório mensal gerado.")}
 function resetarDadosLocais(){
- S={metas:[],ativa:null,tcPrice:35000,tcBRL:0,nickname:"",huntsPersonalizadas:[],huntsFavoritas:[],bossesPersonalizados:[],bossesFavoritos:[],rotacoesPersonalizadas:[]};
+ S=TFT_DEFAULT_STATE();
  try{localStorage.removeItem(CK+"data");localStorage.removeItem("tft_weekly_goal");}catch(e){}
  try{for(let i=0;i<40;i++)document.cookie=CK+i+"=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";document.cookie=CK+"n=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";}catch(e){}
  if(window.TibiaFarmRetention){window.TibiaFarmRetention.clearDate();window.TibiaFarmRetention.refresh();}
@@ -1409,12 +1422,8 @@ window.updateAuthUI=function(){
  }
 };
 window.onAuthBtn=function(){
- if(window.currentUser){
-  if(confirm('Sair da conta "'+(window.currentUser.email||"")+'"?\n\nOs dados continuam salvos na nuvem; este navegador volta a usar apenas o armazenamento local.'))
-   window.logoutGoogle&&window.logoutGoogle();
- }else{
-  window.loginGoogle&&window.loginGoogle();
- }
+ if(window.currentUser){window.abrirLogoutModal&&window.abrirLogoutModal();}
+ else{window.loginGoogle&&window.loginGoogle();}
 };
 
 carregar();render();
@@ -1493,23 +1502,18 @@ window.gerarNicknameAleatorio=gerarNicknameAleatorio;
 async function pullCloud(uid){
  try{
   const snap=await getDoc(refDoUsuario(uid));
-  if(snap.exists() && snap.data() && snap.data().metas){
-   window.S=snap.data();
-   if(typeof window.S.nickname!=="string") window.S.nickname="";
-   window.salvarLocal&&window.salvarLocal();
-   await pushCloud();
+  if(snap.exists()&&snap.data()&&snap.data().metas){
+   window.S=snap.data();if(typeof window.S.nickname!=="string")window.S.nickname="";
+   const goal=loadAccountGoal(uid);if(goal!=null)localStorage.setItem("tft_weekly_goal",goal);else localStorage.removeItem("tft_weekly_goal");
+   window.salvarLocal&&window.salvarLocal();await pushCloud();
   }else{
-   // Conta sem dados/metas: não cria nickname, não cria ranking e não
-   // recria dados automaticamente depois de "Limpar dados".
-   if(window.S && !Array.isArray(window.S.metas)) window.S={metas:[],ativa:null,tcPrice:35000,tcBRL:0,nickname:""};
-   if(window.salvarLocal)window.salvarLocal();
+   let local=loadAccountLocal(uid);
+   if(local){window.S=local;const goal=loadAccountGoal(uid);if(goal!=null)localStorage.setItem("tft_weekly_goal",goal);else localStorage.removeItem("tft_weekly_goal");window.salvarLocal&&window.salvarLocal();await pushCloud();}
+   else if(window.S&&meaningfulState(window.S)){local=window.S;saveAccountLocal(uid);clearAnonymousLocal();window.S=local;await pushCloud();}
+   else{window.S=TFT_DEFAULT_STATE();localStorage.removeItem("tft_weekly_goal");window.salvarLocal&&window.salvarLocal();}
   }
- }catch(e){
-  console.error("Falha ao carregar da nuvem:",e);
-  alert("Não foi possível carregar seus dados da nuvem agora. Seus dados locais continuam intactos.");
- }
- window.render&&window.render();
- window.updateAuthUI&&window.updateAuthUI();
+ }catch(e){console.error("Falha ao carregar da nuvem:",e);alert("Não foi possível carregar seus dados da nuvem agora. Seus dados locais continuam intactos.");}
+ window.render&&window.render();window.updateAuthUI&&window.updateAuthUI();
 }
 
 // Limpa os dados persistidos somente quando o usuário usa o botão
@@ -1569,9 +1573,9 @@ onAuthStateChanged(auth, async (user)=>{
  window.currentUser = user;
  if(user){ await pullCloud(user.uid); }
  else{
-  if(window.resetarDadosLocais)window.resetarDadosLocais();
-  window.render && window.render();
-  window.updateAuthUI && window.updateAuthUI();
+  window.S=TFT_DEFAULT_STATE();
+  try{localStorage.removeItem("tft_weekly_goal");}catch(e){}
+  window.render&&window.render();window.updateAuthUI&&window.updateAuthUI();
  }
 });
 </script>
@@ -2181,7 +2185,7 @@ function removerMetaSemanal(){
     setDate:function(d){selectedIni=d||'';selectedFim=d||'';render()},
     setRange:function(ini,fim){selectedIni=ini||'';selectedFim=fim||'';render()},
     clearDate:function(){selectedIni='';selectedFim='';render()},
-    setWeeklyGoal:function(v){v=number(v);if(v>0){localStorage.setItem('tft_weekly_goal',v);render()}}
+    setWeeklyGoal:function(v){v=number(v);if(v>0){localStorage.setItem('tft_weekly_goal',v);if(window.currentUser)try{localStorage.setItem(accountGoalKey(window.currentUser.uid),v)}catch(e){}render()}}
   };
 
   /* atualiza sempre que o app salvar ou re-renderizar */

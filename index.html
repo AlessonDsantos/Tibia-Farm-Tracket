@@ -1404,6 +1404,50 @@ function relogio(){
   d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}
 relogio();setInterval(relogio,30000);
 /* ================= conta Google / nuvem ================= */
+/* ================= logout com escolha do armazenamento ================= */
+window.abrirLogoutModal=function(){
+ const m=document.getElementById("mLogoutChoice");
+ if(!m)return;
+ m.classList.add("open");
+ m.setAttribute("aria-hidden","false");
+};
+window.fecharLogoutModal=function(){
+ const m=document.getElementById("mLogoutChoice");
+ if(!m)return;
+ m.classList.remove("open");
+ m.setAttribute("aria-hidden","true");
+};
+window.logoutEscolhaManter=async function(){
+ const u=window.currentUser;
+ if(!u)return;
+ try{
+  /* Garante que a versão atual esteja guardada no armazenamento específico da conta. */
+  saveAccountLocal(u.uid);
+  window.fecharLogoutModal();
+  await signOut(auth);
+ }catch(e){
+  console.error("Falha ao sair mantendo os dados:",e);
+  alert("Não foi possível sair da conta agora. Seus dados não foram apagados.");
+ }
+};
+window.logoutEscolhaLimpar=async function(){
+ const u=window.currentUser;
+ if(!u)return;
+ const ok=confirm("Tem certeza que deseja limpar os dados desta conta? Esta ação remove os dados salvos neste navegador e também os dados salvos na nuvem, incluindo o ranking.");
+ if(!ok)return;
+ try{
+  /* Remove somente o armazenamento pertencente à conta atual. */
+  localStorage.removeItem(accountDataKey(u.uid));
+  localStorage.removeItem(accountGoalKey(u.uid));
+  await window.limparDadosNuvem();
+  window.fecharLogoutModal();
+  await signOut(auth);
+ }catch(e){
+  console.error("Falha ao sair limpando os dados:",e);
+  alert("Não foi possível concluir a limpeza e o logout. Tente novamente.");
+ }
+};
+
 window.updateAuthUI=function(){
  const btn=document.getElementById("btnAuth"),dot=document.getElementById("cloudDot"),
   status=document.getElementById("syncStatus");

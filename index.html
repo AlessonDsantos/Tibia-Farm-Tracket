@@ -1424,7 +1424,7 @@ window.logoutEscolhaManter=async function(){
   /* Garante que a versão atual esteja guardada no armazenamento específico da conta. */
   saveAccountLocal(u.uid);
   window.fecharLogoutModal();
-  await signOut(auth);
+  await window.logoutGoogle();
  }catch(e){
   console.error("Falha ao sair mantendo os dados:",e);
   alert("Não foi possível sair da conta agora. Seus dados não foram apagados.");
@@ -1441,7 +1441,7 @@ window.logoutEscolhaLimpar=async function(){
   localStorage.removeItem(accountGoalKey(u.uid));
   await window.limparDadosNuvem();
   window.fecharLogoutModal();
-  await signOut(auth);
+  await window.logoutGoogle();
  }catch(e){
   console.error("Falha ao sair limpando os dados:",e);
   alert("Não foi possível concluir a limpeza e o logout. Tente novamente.");
